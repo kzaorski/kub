@@ -141,39 +141,39 @@ kub/
 
 ## Plan Implementacji
 
-### Faza 0: Inicjalizacja repozytorium
+### Faza 0: Inicjalizacja repozytorium ✅
 1. `git init` w folderze `/Users/krzyzao/dev/kub`
 2. Utworzenie `.gitignore` (node_modules, dist, binary Go, .env, itp.)
 3. Skopiowanie tego planu do `docs/PLAN.md` w projekcie
 4. Pierwszy commit
 
-### Faza 1: Szkielet projektu
+### Faza 1: Szkielet projektu ✅
 1. Inicjalizacja Go module + podstawowy serwer HTTP
 2. Inicjalizacja Vite + React + TypeScript + Tailwind
 3. Konfiguracja shadcn/ui
 4. Proxy dev server (Vite -> Go backend)
 
-### Faza 2: Połączenie z K8s
+### Faza 2: Połączenie z K8s ✅
 1. Klient K8s z client-go (kubeconfig)
 2. REST endpoint: GET /api/namespaces
 3. REST endpoint: GET /api/pods?namespace=X
 4. REST endpoint: GET /api/nodes
 
-### Faza 3: Real-time (WebSocket)
+### Faza 3: Real-time (WebSocket) ✅
 1. WebSocket hub w Go
 2. Watch na pody z client-go
 3. Hook useWebSocket w React
 4. Real-time lista podów z animacjami lifecycle
 
-### Faza 4: Metryki i wizualizacje
+### Faza 4: Metryki i wizualizacje ✅
 1. Integracja z Metrics Server (metrics.k8s.io)
 2. Wykresy CPU/RAM z Recharts
 3. Gauge components dla aktualnych wartości
 
-### Faza 5: Polish
-1. Context/namespace selector
-2. Responsywny layout
-3. Error handling + loading states
+### Faza 5: Polish 🔄
+1. Context/namespace selector ✅
+2. Responsywny layout ✅
+3. Error handling + loading states ✅
 4. Build produkcyjny (embed frontend w Go binary)
 
 ---
