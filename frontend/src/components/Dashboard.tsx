@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   Server,
   Box,
@@ -12,68 +12,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PodList } from "./PodList";
 import { GaugeChart } from "./GaugeChart";
-import { MetricsChart } from "./MetricsChart";
 import { ContextSelector } from "./ContextSelector";
 import { usePods } from "@/hooks/usePods";
 import { formatBytes, formatMillicores } from "@/lib/utils";
 
-interface MetricsDataPoint {
-  timestamp: number;
-  cpu: number;
-  memory: number;
-}
-
-const MAX_HISTORY_POINTS = 30;
-
 export function Dashboard() {
   const [namespace, setNamespace] = useState("all");
   const [contextVersion, setContextVersion] = useState(0);
-  const { pods, summary, metrics, isLoading, error, isConnected } =
+  const { pods, summary, isLoading, error, isConnected } =
     usePods(namespace, contextVersion);
-  const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
-  const lastMetricsTimestamp = useRef<number>(0);
 
   const handleContextChange = () => {
-    setMetricsHistory([]);
-    lastMetricsTimestamp.current = 0;
     setContextVersion((v) => v + 1);
   };
-
-  // Update metrics history when new metrics arrive
-  useEffect(() => {
-    if (metrics && metrics.timestamp !== lastMetricsTimestamp.current) {
-      lastMetricsTimestamp.current = metrics.timestamp;
-
-      // Calculate aggregate metrics
-      let totalCpuPercent = 0;
-      let totalMemPercent = 0;
-
-      if (metrics.nodeMetrics.length > 0) {
-        totalCpuPercent =
-          metrics.nodeMetrics.reduce((acc, m) => acc + m.cpuPercent, 0) /
-          metrics.nodeMetrics.length;
-        totalMemPercent =
-          metrics.nodeMetrics.reduce((acc, m) => acc + m.memPercent, 0) /
-          metrics.nodeMetrics.length;
-      }
-
-      setMetricsHistory((prev) => {
-        const newHistory = [
-          ...prev,
-          {
-            timestamp: metrics.timestamp,
-            cpu: totalCpuPercent,
-            memory: totalMemPercent,
-          },
-        ];
-        // Keep only the last MAX_HISTORY_POINTS
-        if (newHistory.length > MAX_HISTORY_POINTS) {
-          return newHistory.slice(-MAX_HISTORY_POINTS);
-        }
-        return newHistory;
-      });
-    }
-  }, [metrics]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -196,42 +147,31 @@ export function Dashboard() {
           </Card>
         </div>
 
-        {/* Metrics Section */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {/* Gauges */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                Cluster Utilization
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-around">
-                <GaugeChart
-                  value={summary?.cpuPercent ?? 0}
-                  label="CPU"
-                  sublabel={summary ? formatMillicores(summary.usedCpu) : "-"}
-                  size="md"
-                />
-                <GaugeChart
-                  value={summary?.memoryPercent ?? 0}
-                  label="Memory"
-                  sublabel={summary ? formatBytes(summary.usedMemory) : "-"}
-                  size="md"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Line Chart */}
-          <div className="lg:col-span-2">
-            <MetricsChart
-              title="Cluster Metrics History"
-              data={metricsHistory}
-            />
-          </div>
-        </div>
+        {/* Cluster Utilization */}
+        <Card className="mb-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Cluster Utilization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex justify-around max-w-md">
+              <GaugeChart
+                value={summary?.cpuPercent ?? 0}
+                label="CPU"
+                sublabel={summary ? formatMillicores(summary.usedCpu) : "-"}
+                size="md"
+              />
+              <GaugeChart
+                value={summary?.memoryPercent ?? 0}
+                label="Memory"
+                sublabel={summary ? formatBytes(summary.usedMemory) : "-"}
+                size="md"
+              />
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Pods Section */}
         <div className="space-y-4">
