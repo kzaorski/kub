@@ -7,20 +7,27 @@ import {
   Activity,
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PodList } from "./PodList";
+import { NodeList } from "./NodeList";
 import { GaugeChart } from "./GaugeChart";
 import { ContextSelector } from "./ContextSelector";
 import { usePods } from "@/hooks/usePods";
+import { useNodes } from "@/hooks/useNodes";
 import { formatBytes, formatMillicores } from "@/lib/utils";
 
 export function Dashboard() {
   const [namespace, setNamespace] = useState("all");
   const [contextVersion, setContextVersion] = useState(0);
+  const [showPodList, setShowPodList] = useState(false);
+  const [showNodeList, setShowNodeList] = useState(false);
   const { pods, summary, isLoading, error, isConnected } =
     usePods(namespace, contextVersion);
+  const { nodes, isLoading: nodesLoading } = useNodes(contextVersion);
 
   const handleContextChange = () => {
     setContextVersion((v) => v + 1);
@@ -70,10 +77,20 @@ export function Dashboard() {
 
         {/* Summary Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          <Card>
+          <Card
+            className="cursor-pointer transition-colors hover:bg-accent/50"
+            onClick={() => setShowNodeList(!showNodeList)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Nodes</CardTitle>
-              <Server className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1">
+                <Server className="h-4 w-4 text-muted-foreground" />
+                {showNodeList ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -83,10 +100,20 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card
+            className="cursor-pointer transition-colors hover:bg-accent/50"
+            onClick={() => setShowPodList(!showPodList)}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pods</CardTitle>
-              <Box className="h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center gap-1">
+                <Box className="h-4 w-4 text-muted-foreground" />
+                {showPodList ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -173,19 +200,37 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Pods Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <Box className="h-5 w-5" />
-              Pods
-              <Badge variant="secondary" className="ml-2">
-                {pods.length}
-              </Badge>
-            </h2>
+        {/* Nodes Section */}
+        {showNodeList && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Server className="h-5 w-5" />
+                Nodes
+                <Badge variant="secondary" className="ml-2">
+                  {nodes.length}
+                </Badge>
+              </h2>
+            </div>
+            <NodeList nodes={nodes} isLoading={nodesLoading} />
           </div>
-          <PodList pods={pods} isLoading={isLoading} />
-        </div>
+        )}
+
+        {/* Pods Section */}
+        {showPodList && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Box className="h-5 w-5" />
+                Pods
+                <Badge variant="secondary" className="ml-2">
+                  {pods.length}
+                </Badge>
+              </h2>
+            </div>
+            <PodList pods={pods} isLoading={isLoading} />
+          </div>
+        )}
       </main>
     </div>
   );
