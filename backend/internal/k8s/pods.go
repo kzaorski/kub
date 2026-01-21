@@ -128,13 +128,18 @@ func getPodStatus(pod corev1.Pod) string {
 		return "Terminating"
 	}
 
-	// Check init containers
+	// Check init containers - only report if waiting or failed
 	for _, cs := range pod.Status.InitContainerStatuses {
 		if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
 			return "Init:" + cs.State.Waiting.Reason
 		}
-		if cs.State.Terminated != nil && cs.State.Terminated.Reason != "" {
-			return "Init:" + cs.State.Terminated.Reason
+		// Only report terminated init containers if they failed (non-zero exit code)
+		if cs.State.Terminated != nil && cs.State.Terminated.ExitCode != 0 {
+			reason := cs.State.Terminated.Reason
+			if reason == "" {
+				reason = "Error"
+			}
+			return "Init:" + reason
 		}
 	}
 
