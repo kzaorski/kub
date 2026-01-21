@@ -29,10 +29,12 @@ A local web application for monitoring Kubernetes clusters with attractive visua
 
 - Go 1.21+
 - Node.js 18+
-- kubectl configured (`~/.kube/config`)
+- kubectl configured (`~/.kube/config` or `%USERPROFILE%\.kube\config`)
 - Metrics Server in cluster (for CPU/RAM metrics)
 
 ## Quick Start
+
+### macOS / Linux
 
 ```bash
 # Install dependencies
@@ -42,10 +44,22 @@ make install
 make dev
 ```
 
+### Windows (PowerShell)
+
+```powershell
+# Install dependencies
+.\scripts\install.ps1
+
+# Run in development mode
+.\scripts\dev.ps1
+```
+
 - Backend: http://localhost:8080
 - Frontend: http://localhost:5173
 
 ## Production Build
+
+### macOS / Linux
 
 ```bash
 # Build everything (frontend embedded in Go binary)
@@ -53,6 +67,16 @@ make build
 
 # Run production build
 ./bin/kub
+```
+
+### Windows (PowerShell)
+
+```powershell
+# Build everything
+.\scripts\build.ps1
+
+# Run production build
+.\bin\kub.exe
 ```
 
 ## Project Structure

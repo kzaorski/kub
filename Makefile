@@ -1,24 +1,28 @@
 .PHONY: all build dev clean backend frontend install
 
+# Use 'go' from PATH (works on macOS, Linux, Windows with Go installed)
+GO ?= go
+NPM ?= npm
+
 # Default target
 all: build
 
 # Install dependencies
 install:
-	cd backend && /opt/homebrew/bin/go mod tidy
-	cd frontend && npm install
+	cd backend && $(GO) mod tidy
+	cd frontend && $(NPM) install
 
 # Build everything
 build: build-frontend build-backend
 
 # Build backend
 build-backend:
-	cd backend && /opt/homebrew/bin/go build -o ../bin/kub ./cmd/kub
+	cd backend && $(GO) build -o ../bin/kub ./cmd/kub
 
 # Build frontend
 build-frontend:
-	cd frontend && npm run build
-	rm -rf backend/cmd/kub/static
+	cd frontend && $(NPM) run build
+	rm -rf backend/cmd/kub/static || true
 	cp -r frontend/dist backend/cmd/kub/static
 
 # Development mode - run both backend and frontend
@@ -30,11 +34,11 @@ dev:
 
 # Run backend in dev mode
 dev-backend:
-	cd backend && /opt/homebrew/bin/go run ./cmd/kub
+	cd backend && $(GO) run ./cmd/kub
 
 # Run frontend in dev mode
 dev-frontend:
-	cd frontend && npm run dev
+	cd frontend && $(NPM) run dev
 
 # Run production build
 run: build
@@ -49,8 +53,4 @@ clean:
 
 # Format code
 fmt:
-	cd backend && /opt/homebrew/bin/go fmt ./...
-
-# Type check frontend
-typecheck:
-	cd frontend && npm run typecheck
+	cd backend && $(GO) fmt ./...
