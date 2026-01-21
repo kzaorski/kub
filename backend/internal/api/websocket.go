@@ -194,8 +194,22 @@ func (h *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Send initial data
 	go h.sendInitialData(conn, r.URL.Query().Get("namespace"))
 
+	// Start ping/pong keepalive
+	go h.writePump(conn)
+
 	// Read messages (for ping/pong and close handling)
-	go h.readPump(conn)
+	h.readPump(conn)
+}
+
+func (h *Hub) writePump(conn *websocket.Conn) {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			return
+		}
+	}
 }
 
 func (h *Hub) sendInitialData(conn *websocket.Conn, namespace string) {

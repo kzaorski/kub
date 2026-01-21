@@ -10,14 +10,30 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const { namespace = '', onMessage, onConnect, onDisconnect, onError } = options;
+  const { namespace = '' } = options;
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
 
+  // Store callbacks in refs to avoid reconnection on callback change
+  const onMessageRef = useRef(options.onMessage);
+  const onConnectRef = useRef(options.onConnect);
+  const onDisconnectRef = useRef(options.onDisconnect);
+  const onErrorRef = useRef(options.onError);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onMessageRef.current = options.onMessage;
+    onConnectRef.current = options.onConnect;
+    onDisconnectRef.current = options.onDisconnect;
+    onErrorRef.current = options.onError;
+  }, [options.onMessage, options.onConnect, options.onDisconnect, options.onError]);
+
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (!mountedRef.current) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
       return;
     }
 
@@ -29,8 +45,9 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     wsRef.current = ws;
 
     ws.onopen = () => {
+      if (!mountedRef.current) return;
       setIsConnected(true);
-      onConnect?.();
+      onConnectRef.current?.();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
@@ -38,28 +55,34 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     };
 
     ws.onmessage = (event) => {
+      if (!mountedRef.current) return;
       try {
         const message = JSON.parse(event.data) as WebSocketMessage;
         setLastMessage(message);
-        onMessage?.(message);
+        onMessageRef.current?.(message);
       } catch (e) {
         console.error('Failed to parse WebSocket message:', e);
       }
     };
 
     ws.onclose = () => {
+      if (!mountedRef.current) return;
       setIsConnected(false);
-      onDisconnect?.();
+      onDisconnectRef.current?.();
+      wsRef.current = null;
       // Reconnect after 3 seconds
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        if (mountedRef.current) {
+          connect();
+        }
       }, 3000);
     };
 
     ws.onerror = (error) => {
-      onError?.(error);
+      if (!mountedRef.current) return;
+      onErrorRef.current?.(error);
     };
-  }, [namespace, onConnect, onDisconnect, onError, onMessage]);
+  }, [namespace]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -79,8 +102,10 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
     return () => {
+      mountedRef.current = false;
       disconnect();
     };
   }, [connect, disconnect]);
