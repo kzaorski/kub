@@ -6,31 +6,24 @@ Write-Host "Backend: http://localhost:8080" -ForegroundColor Green
 Write-Host "Frontend: http://localhost:5173" -ForegroundColor Green
 Write-Host ""
 
-# Start backend in background
-$backend = Start-Job -ScriptBlock {
-    Set-Location $using:PWD\backend
-    go run ./cmd/kub
-}
+# Get the project root directory (parent of scripts folder)
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$backendPath = Join-Path $projectRoot "backend"
+$frontendPath = Join-Path $projectRoot "frontend"
 
-# Start frontend in background
-$frontend = Start-Job -ScriptBlock {
-    Set-Location $using:PWD\frontend
-    npm run dev
-}
+# Start backend in new window
+Start-Process powershell -ArgumentList @(
+    "-NoExit"
+    "-Command"
+    "Set-Location '$backendPath'; Write-Host 'KUB Backend' -ForegroundColor Cyan; go run ./cmd/kub"
+) -WorkingDirectory $backendPath
 
-Write-Host "Press Ctrl+C to stop both servers" -ForegroundColor Yellow
-Write-Host ""
+# Start frontend in new window
+Start-Process powershell -ArgumentList @(
+    "-NoExit"
+    "-Command"
+    "Set-Location '$frontendPath'; Write-Host 'KUB Frontend' -ForegroundColor Cyan; npm run dev"
+) -WorkingDirectory $frontendPath
 
-try {
-    while ($true) {
-        # Show output from both jobs
-        Receive-Job $backend -ErrorAction SilentlyContinue
-        Receive-Job $frontend -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 500
-    }
-}
-finally {
-    Write-Host "`nStopping servers..." -ForegroundColor Yellow
-    Stop-Job $backend, $frontend -ErrorAction SilentlyContinue
-    Remove-Job $backend, $frontend -ErrorAction SilentlyContinue
-}
+Write-Host "Started backend and frontend in separate windows." -ForegroundColor Yellow
+Write-Host "Close those windows to stop the servers." -ForegroundColor Yellow

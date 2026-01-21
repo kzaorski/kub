@@ -11,11 +11,13 @@ import type { Namespace } from "@/types/k8s";
 interface ContextSelectorProps {
   selectedNamespace: string;
   onNamespaceChange: (namespace: string) => void;
+  onContextChange?: () => void;
 }
 
 export function ContextSelector({
   selectedNamespace,
   onNamespaceChange,
+  onContextChange,
 }: ContextSelectorProps) {
   const [namespaces, setNamespaces] = useState<Namespace[]>([]);
   const [contexts, setContexts] = useState<string[]>([]);
@@ -61,6 +63,7 @@ export function ContextSelector({
         const nsData = await nsRes.json();
         setNamespaces(nsData || []);
         onNamespaceChange("all");
+        onContextChange?.();
       }
     } catch (err) {
       console.error("Failed to switch context:", err);

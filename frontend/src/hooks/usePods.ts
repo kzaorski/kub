@@ -6,13 +6,24 @@ interface PodWithAnimation extends Pod {
   animationClass?: string;
 }
 
-export function usePods(namespace: string = '') {
+export function usePods(namespace: string = '', contextVersion: number = 0) {
   const [pods, setPods] = useState<PodWithAnimation[]>([]);
   const [summary, setSummary] = useState<ClusterSummary | null>(null);
   const [metrics, setMetrics] = useState<MetricsSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const animationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // Clear state when context changes
+  useEffect(() => {
+    if (contextVersion > 0) {
+      setPods([]);
+      setSummary(null);
+      setMetrics(null);
+      setIsLoading(true);
+      setError(null);
+    }
+  }, [contextVersion]);
 
   const clearAnimationClass = useCallback((podKey: string) => {
     setPods(prev => prev.map(p => {
@@ -104,6 +115,7 @@ export function usePods(namespace: string = '') {
 
   const { isConnected } = useWebSocket({
     namespace,
+    contextVersion,
     onMessage: handleMessage,
     onConnect: () => {
       setError(null);

@@ -3,17 +3,30 @@
 
 Write-Host "Installing KUB dependencies..." -ForegroundColor Cyan
 
+# Get the project root directory (parent of scripts folder)
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$backendPath = Join-Path $projectRoot "backend"
+$frontendPath = Join-Path $projectRoot "frontend"
+
 # Install Go dependencies
 Write-Host "Installing Go dependencies..." -ForegroundColor Yellow
-Set-Location backend
-go mod tidy
-Set-Location ..
+Push-Location $backendPath
+try {
+    go mod tidy
+    if ($LASTEXITCODE -ne 0) { throw "Go mod tidy failed" }
+} finally {
+    Pop-Location
+}
 
 # Install Node dependencies
 Write-Host "Installing Node dependencies..." -ForegroundColor Yellow
-Set-Location frontend
-npm install
-Set-Location ..
+Push-Location $frontendPath
+try {
+    npm install
+    if ($LASTEXITCODE -ne 0) { throw "npm install failed" }
+} finally {
+    Pop-Location
+}
 
 Write-Host ""
 Write-Host "Dependencies installed!" -ForegroundColor Green

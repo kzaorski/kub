@@ -3,6 +3,7 @@ import type { WebSocketMessage } from '@/types/k8s';
 
 interface UseWebSocketOptions {
   namespace?: string;
+  contextVersion?: number;
   onMessage?: (message: WebSocketMessage) => void;
   onConnect?: () => void;
   onDisconnect?: () => void;
@@ -10,7 +11,7 @@ interface UseWebSocketOptions {
 }
 
 export function useWebSocket(options: UseWebSocketOptions = {}) {
-  const { namespace = '' } = options;
+  const { namespace = '', contextVersion = 0 } = options;
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
@@ -33,8 +34,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const connect = useCallback(() => {
     if (!mountedRef.current) return;
-    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) {
-      return;
+
+    // Close existing connection if any (for context changes)
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -82,7 +86,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       if (!mountedRef.current) return;
       onErrorRef.current?.(error);
     };
-  }, [namespace]);
+  }, [namespace, contextVersion]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {

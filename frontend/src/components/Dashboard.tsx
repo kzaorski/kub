@@ -27,10 +27,17 @@ const MAX_HISTORY_POINTS = 30;
 
 export function Dashboard() {
   const [namespace, setNamespace] = useState("all");
+  const [contextVersion, setContextVersion] = useState(0);
   const { pods, summary, metrics, isLoading, error, isConnected } =
-    usePods(namespace);
+    usePods(namespace, contextVersion);
   const [metricsHistory, setMetricsHistory] = useState<MetricsDataPoint[]>([]);
   const lastMetricsTimestamp = useRef<number>(0);
+
+  const handleContextChange = () => {
+    setMetricsHistory([]);
+    lastMetricsTimestamp.current = 0;
+    setContextVersion((v) => v + 1);
+  };
 
   // Update metrics history when new metrics arrive
   useEffect(() => {
@@ -98,6 +105,7 @@ export function Dashboard() {
           <ContextSelector
             selectedNamespace={namespace}
             onNamespaceChange={setNamespace}
+            onContextChange={handleContextChange}
           />
         </div>
       </header>
