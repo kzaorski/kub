@@ -93,7 +93,8 @@ func (h *Handler) GetPodMetrics(w http.ResponseWriter, r *http.Request) {
 
 // GetClusterSummary returns cluster summary
 func (h *Handler) GetClusterSummary(w http.ResponseWriter, r *http.Request) {
-	summary, err := h.k8sClient.GetClusterSummary(r.Context())
+	namespace := r.URL.Query().Get("namespace")
+	summary, err := h.k8sClient.GetClusterSummary(r.Context(), namespace)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

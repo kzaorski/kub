@@ -109,15 +109,15 @@ func (c *Client) GetPodMetrics(ctx context.Context, namespace string) ([]models.
 }
 
 // GetClusterSummary returns a summary of the cluster state
-func (c *Client) GetClusterSummary(ctx context.Context) (*models.ClusterSummary, error) {
+func (c *Client) GetClusterSummary(ctx context.Context, namespace string) (*models.ClusterSummary, error) {
 	// Get nodes
 	nodes, err := c.GetNodes(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get pods
-	pods, err := c.GetPods(ctx, "")
+	// Get pods (respects namespace filter)
+	pods, err := c.GetPods(ctx, namespace)
 	if err != nil {
 		return nil, err
 	}

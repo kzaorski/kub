@@ -227,8 +227,8 @@ func (h *Hub) sendInitialData(conn *websocket.Conn, namespace string) {
 		conn.WriteMessage(websocket.TextMessage, data)
 	}
 
-	// Send cluster summary
-	summary, err := h.k8sClient.GetClusterSummary(ctx)
+	// Send cluster summary (namespace-aware)
+	summary, err := h.k8sClient.GetClusterSummary(ctx, namespace)
 	if err != nil {
 		log.Printf("Failed to get cluster summary: %v", err)
 	} else {
