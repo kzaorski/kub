@@ -88,6 +88,10 @@ kub/
 │   │   ├── k8s/
 │   │   │   ├── client.go        # K8s client setup
 │   │   │   ├── pods.go          # Pod operations + watch
+│   │   │   ├── nodes.go         # Node operations
+│   │   │   ├── deployments.go   # Deployment operations
+│   │   │   ├── services.go      # Service operations
+│   │   │   ├── configmaps.go    # ConfigMap operations
 │   │   │   ├── metrics.go       # Metrics Server queries
 │   │   │   └── events.go        # Events watch
 │   │   └── models/
@@ -106,12 +110,23 @@ kub/
 │   │   │   ├── Dashboard.tsx
 │   │   │   ├── PodList.tsx      # Lista z animacjami
 │   │   │   ├── PodCard.tsx      # Pojedynczy pod
+│   │   │   ├── NodeList.tsx     # Lista nodów
+│   │   │   ├── DeploymentList.tsx # Lista deployments
+│   │   │   ├── DeploymentCard.tsx # Pojedynczy deployment
+│   │   │   ├── ServiceList.tsx  # Lista services
+│   │   │   ├── ServiceCard.tsx  # Pojedynczy service
+│   │   │   ├── ConfigMapList.tsx # Lista configmaps
+│   │   │   ├── ConfigMapCard.tsx # Pojedynczy configmap
 │   │   │   ├── MetricsChart.tsx # Wykresy CPU/RAM
 │   │   │   ├── GaugeChart.tsx   # Zegary/gauge
 │   │   │   └── ContextSelector.tsx
 │   │   ├── hooks/
 │   │   │   ├── useWebSocket.ts  # WebSocket connection
-│   │   │   └── usePods.ts       # Pod state management
+│   │   │   ├── usePods.ts       # Pod state management
+│   │   │   ├── useNodes.ts      # Node state management
+│   │   │   ├── useDeployments.ts # Deployment state management
+│   │   │   ├── useServices.ts   # Service state management
+│   │   │   └── useConfigMaps.ts # ConfigMap state management
 │   │   ├── lib/
 │   │   │   └── utils.ts
 │   │   └── types/
@@ -168,7 +183,7 @@ kub/
 - [ ] Timeline eventów
 - [ ] Logi podów (streaming)
 - [ ] Exec do kontenera (terminal w przeglądarce)
-- [ ] Deployments, Services, ConfigMaps
+- [x] Deployments, Services, ConfigMaps
 - [ ] Dark mode
 
 ---

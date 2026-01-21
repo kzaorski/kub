@@ -99,3 +99,48 @@ export interface WebSocketMessage {
   type: 'pod' | 'pods' | 'metrics' | 'summary';
   data: PodEvent | Pod[] | MetricsSnapshot | ClusterSummary;
 }
+
+export interface Deployment {
+  name: string;
+  namespace: string;
+  replicas: number;
+  readyReplicas: number;
+  updatedReplicas: number;
+  availableReplicas: number;
+  strategy: string;
+  labels: Record<string, string>;
+  age: string;
+  createdAt: string;
+  animationClass?: string;
+}
+
+export interface Service {
+  name: string;
+  namespace: string;
+  type: string;
+  clusterIP: string;
+  externalIP: string;
+  ports: ServicePort[];
+  selector: Record<string, string>;
+  age: string;
+  createdAt: string;
+  animationClass?: string;
+}
+
+export interface ServicePort {
+  name: string;
+  port: number;
+  targetPort: string;
+  nodePort?: number;
+  protocol: string;
+}
+
+export interface ConfigMap {
+  name: string;
+  namespace: string;
+  dataCount: number;
+  keys: string[];
+  age: string;
+  createdAt: string;
+  animationClass?: string;
+}

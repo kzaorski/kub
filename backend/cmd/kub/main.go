@@ -58,6 +58,12 @@ func main() {
 		r.Get("/summary", handler.GetClusterSummary)
 		r.Get("/contexts", handler.GetContexts)
 		r.Post("/contexts", handler.SwitchContext)
+		r.Get("/deployments", handler.GetDeployments)
+		r.Get("/deployments/{namespace}/{name}", handler.GetDeployment)
+		r.Get("/services", handler.GetServices)
+		r.Get("/services/{namespace}/{name}", handler.GetService)
+		r.Get("/configmaps", handler.GetConfigMaps)
+		r.Get("/configmaps/{namespace}/{name}", handler.GetConfigMap)
 	})
 
 	// WebSocket

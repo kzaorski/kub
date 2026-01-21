@@ -108,3 +108,49 @@ type ClusterSummary struct {
 	CPUPercent      float64 `json:"cpuPercent"`
 	MemoryPercent   float64 `json:"memoryPercent"`
 }
+
+// Deployment represents a Kubernetes deployment
+type Deployment struct {
+	Name              string            `json:"name"`
+	Namespace         string            `json:"namespace"`
+	Replicas          int32             `json:"replicas"`
+	ReadyReplicas     int32             `json:"readyReplicas"`
+	UpdatedReplicas   int32             `json:"updatedReplicas"`
+	AvailableReplicas int32             `json:"availableReplicas"`
+	Strategy          string            `json:"strategy"`
+	Labels            map[string]string `json:"labels"`
+	Age               string            `json:"age"`
+	CreatedAt         time.Time         `json:"createdAt"`
+}
+
+// Service represents a Kubernetes service
+type Service struct {
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Type        string            `json:"type"`
+	ClusterIP   string            `json:"clusterIP"`
+	ExternalIP  string            `json:"externalIP"`
+	Ports       []ServicePort     `json:"ports"`
+	Selector    map[string]string `json:"selector"`
+	Age         string            `json:"age"`
+	CreatedAt   time.Time         `json:"createdAt"`
+}
+
+// ServicePort represents a service port
+type ServicePort struct {
+	Name       string `json:"name"`
+	Port       int32  `json:"port"`
+	TargetPort string `json:"targetPort"`
+	NodePort   int32  `json:"nodePort,omitempty"`
+	Protocol   string `json:"protocol"`
+}
+
+// ConfigMap represents a Kubernetes configmap
+type ConfigMap struct {
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	DataCount int               `json:"dataCount"`
+	Keys      []string          `json:"keys"`
+	Age       string            `json:"age"`
+	CreatedAt time.Time         `json:"createdAt"`
+}

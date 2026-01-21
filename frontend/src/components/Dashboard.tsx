@@ -9,15 +9,24 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Layers,
+  Network,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PodList } from "./PodList";
 import { NodeList } from "./NodeList";
+import { DeploymentList } from "./DeploymentList";
+import { ServiceList } from "./ServiceList";
+import { ConfigMapList } from "./ConfigMapList";
 import { GaugeChart } from "./GaugeChart";
 import { ContextSelector } from "./ContextSelector";
 import { usePods } from "@/hooks/usePods";
 import { useNodes } from "@/hooks/useNodes";
+import { useDeployments } from "@/hooks/useDeployments";
+import { useServices } from "@/hooks/useServices";
+import { useConfigMaps } from "@/hooks/useConfigMaps";
 import { formatBytes, formatMillicores } from "@/lib/utils";
 
 export function Dashboard() {
@@ -25,9 +34,15 @@ export function Dashboard() {
   const [contextVersion, setContextVersion] = useState(0);
   const [showPodList, setShowPodList] = useState(false);
   const [showNodeList, setShowNodeList] = useState(false);
+  const [showDeploymentList, setShowDeploymentList] = useState(false);
+  const [showServiceList, setShowServiceList] = useState(false);
+  const [showConfigMapList, setShowConfigMapList] = useState(false);
   const { pods, summary, isLoading, error, isConnected } =
     usePods(namespace, contextVersion);
   const { nodes, isLoading: nodesLoading } = useNodes(contextVersion);
+  const { deployments, isLoading: deploymentsLoading } = useDeployments(namespace, contextVersion);
+  const { services, isLoading: servicesLoading } = useServices(namespace, contextVersion);
+  const { configmaps, isLoading: configmapsLoading } = useConfigMaps(namespace, contextVersion);
 
   const handleContextChange = () => {
     setContextVersion((v) => v + 1);
@@ -137,6 +152,52 @@ export function Dashboard() {
             </CardContent>
           </Card>
 
+          <Card
+            className="cursor-pointer transition-colors hover:bg-accent/50"
+            onClick={() => setShowDeploymentList(!showDeploymentList)}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Deployments</CardTitle>
+              <div className="flex items-center gap-1">
+                <Layers className="h-4 w-4 text-muted-foreground" />
+                {showDeploymentList ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{deployments.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {deployments.filter(d => d.readyReplicas === d.replicas && d.replicas > 0).length} ready
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="cursor-pointer transition-colors hover:bg-accent/50"
+            onClick={() => setShowServiceList(!showServiceList)}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Services</CardTitle>
+              <div className="flex items-center gap-1">
+                <Network className="h-4 w-4 text-muted-foreground" />
+                {showServiceList ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{services.length}</div>
+              <p className="text-xs text-muted-foreground">Total services</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
@@ -172,6 +233,29 @@ export function Dashboard() {
               </p>
             </CardContent>
           </Card>
+
+          <Card
+            className="cursor-pointer transition-colors hover:bg-accent/50"
+            onClick={() => setShowConfigMapList(!showConfigMapList)}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">ConfigMaps</CardTitle>
+              <div className="flex items-center gap-1">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                {showConfigMapList ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{configmaps.length}</div>
+              <p className="text-xs text-muted-foreground">Total configmaps</p>
+            </CardContent>
+          </Card>
+
+          <Card></Card>
         </div>
 
         {/* Cluster Utilization */}
@@ -229,6 +313,54 @@ export function Dashboard() {
               </h2>
             </div>
             <PodList pods={pods} isLoading={isLoading} />
+          </div>
+        )}
+
+        {/* Deployments Section */}
+        {showDeploymentList && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Deployments
+                <Badge variant="secondary" className="ml-2">
+                  {deployments.length}
+                </Badge>
+              </h2>
+            </div>
+            <DeploymentList deployments={deployments} isLoading={deploymentsLoading} />
+          </div>
+        )}
+
+        {/* Services Section */}
+        {showServiceList && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Network className="h-5 w-5" />
+                Services
+                <Badge variant="secondary" className="ml-2">
+                  {services.length}
+                </Badge>
+              </h2>
+            </div>
+            <ServiceList services={services} isLoading={servicesLoading} />
+          </div>
+        )}
+
+        {/* ConfigMaps Section */}
+        {showConfigMapList && (
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                ConfigMaps
+                <Badge variant="secondary" className="ml-2">
+                  {configmaps.length}
+                </Badge>
+              </h2>
+            </div>
+            <ConfigMapList configmaps={configmaps} isLoading={configmapsLoading} />
           </div>
         )}
       </main>

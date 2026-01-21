@@ -134,6 +134,87 @@ func (h *Handler) SwitchContext(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, map[string]string{"status": "ok", "context": req.Context})
 }
 
+// GetDeployments returns deployments in a namespace
+func (h *Handler) GetDeployments(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+
+	deployments, err := h.k8sClient.GetDeployments(r.Context(), namespace)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, deployments)
+}
+
+// GetDeployment returns a specific deployment
+func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	deployment, err := h.k8sClient.GetDeployment(r.Context(), namespace, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, deployment)
+}
+
+// GetServices returns services in a namespace
+func (h *Handler) GetServices(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+
+	services, err := h.k8sClient.GetServices(r.Context(), namespace)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, services)
+}
+
+// GetService returns a specific service
+func (h *Handler) GetService(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	service, err := h.k8sClient.GetService(r.Context(), namespace, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, service)
+}
+
+// GetConfigMaps returns configmaps in a namespace
+func (h *Handler) GetConfigMaps(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+
+	configmaps, err := h.k8sClient.GetConfigMaps(r.Context(), namespace)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, configmaps)
+}
+
+// GetConfigMap returns a specific configmap
+func (h *Handler) GetConfigMap(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	configmap, err := h.k8sClient.GetConfigMap(r.Context(), namespace, name)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	respondJSON(w, configmap)
+}
+
 func respondJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
