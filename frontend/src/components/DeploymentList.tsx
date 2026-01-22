@@ -1,4 +1,10 @@
+import { useState, useEffect } from "react";
+import React from "react";
+import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
+import { SortableTableHead } from "@/components/ui/sortable-table-head";
+import { DeploymentRow } from "./DeploymentRow";
 import { DeploymentCard } from "./DeploymentCard";
+import { useTableSort } from "@/hooks/useTableSort";
 import type { Deployment } from "@/types/k8s";
 
 interface DeploymentListProps {
@@ -7,6 +13,31 @@ interface DeploymentListProps {
 }
 
 export function DeploymentList({ deployments, isLoading }: DeploymentListProps) {
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  // Clear selection when deployments change
+  useEffect(() => {
+    if (selectedKey && !deployments.find(d => `${d.namespace}/${d.name}` === selectedKey)) {
+      setSelectedKey(null);
+    }
+  }, [deployments, selectedKey]);
+
+  const toggle = (deployment: Deployment) => {
+    const key = `${deployment.namespace}/${deployment.name}`;
+    setSelectedKey(selectedKey === key ? null : key);
+  };
+
+  // Add readyRatio for sorting
+  const deploymentsWithRatio = deployments.map(d => ({
+    ...d,
+    readyRatio: d.replicas > 0 ? d.readyReplicas / d.replicas : 0,
+  }));
+
+  const { sortedItems, handleSort, getSortDirection } = useTableSort(deploymentsWithRatio, {
+    key: 'readyRatio',
+    direction: 'desc',
+  });
+
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -32,20 +63,46 @@ export function DeploymentList({ deployments, isLoading }: DeploymentListProps) 
     );
   }
 
-  // Sort deployments: ready first, then by name
-  const sortedDeployments = [...deployments].sort((a, b) => {
-    const aReady = a.readyReplicas === a.replicas && a.replicas > 0;
-    const bReady = b.readyReplicas === b.replicas && b.replicas > 0;
-    if (aReady && !bReady) return -1;
-    if (!aReady && bReady) return 1;
-    return a.name.localeCompare(b.name);
-  });
-
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {sortedDeployments.map((deployment) => (
-        <DeploymentCard key={`${deployment.namespace}/${deployment.name}`} deployment={deployment} />
-      ))}
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-8"></TableHead>
+          <SortableTableHead onSort={() => handleSort('name')} sortDirection={getSortDirection('name')}>
+            Name
+          </SortableTableHead>
+          <SortableTableHead onSort={() => handleSort('namespace')} sortDirection={getSortDirection('namespace')}>
+            Namespace
+          </SortableTableHead>
+          <SortableTableHead onSort={() => handleSort('readyRatio')} sortDirection={getSortDirection('readyRatio')}>
+            Ready
+          </SortableTableHead>
+          <SortableTableHead onSort={() => handleSort('strategy')} sortDirection={getSortDirection('strategy')}>
+            Strategy
+          </SortableTableHead>
+          <SortableTableHead onSort={() => handleSort('age')} sortDirection={getSortDirection('age')}>
+            Age
+          </SortableTableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {sortedItems.map((deployment) => {
+          const key = `${deployment.namespace}/${deployment.name}`;
+          const isSelected = selectedKey === key;
+          return (
+            <React.Fragment key={key}>
+              <DeploymentRow deployment={deployment} isSelected={isSelected} onClick={() => toggle(deployment)} />
+              {isSelected && (
+                <TableRow>
+                  <TableCell colSpan={6} className="p-4 bg-muted/30">
+                    <DeploymentCard deployment={deployment} />
+                  </TableCell>
+                </TableRow>
+              )}
+            </React.Fragment>
+          );
+        })}
+      </TableBody>
+    </Table>
   );
 }

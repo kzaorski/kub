@@ -2,8 +2,6 @@ import { useState } from "react";
 import {
   Server,
   Box,
-  Cpu,
-  MemoryStick,
   Activity,
   AlertCircle,
   CheckCircle2,
