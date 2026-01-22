@@ -2,11 +2,33 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
+	"regexp"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/krzyzao/kub/internal/k8s"
 )
+
+// k8sNameRegex validates Kubernetes resource names and namespaces
+var k8sNameRegex = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
+
+// validateK8sName validates a Kubernetes name (namespace, pod name, etc.)
+func validateK8sName(name string) bool {
+	if name == "" {
+		return true // Empty is allowed (means all namespaces)
+	}
+	if len(name) > 253 {
+		return false
+	}
+	return k8sNameRegex.MatchString(name)
+}
+
+// respondError logs the detailed error and returns a generic message
+func respondError(w http.ResponseWriter, err error, statusCode int, userMessage string) {
+	log.Printf("API error: %v", err)
+	http.Error(w, userMessage, statusCode)
+}
 
 // Handler holds the HTTP handlers
 type Handler struct {
@@ -22,7 +44,7 @@ func NewHandler(k8sClient *k8s.Client) *Handler {
 func (h *Handler) GetNamespaces(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := h.k8sClient.GetNamespaces(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch namespaces")
 		return
 	}
 
@@ -32,10 +54,14 @@ func (h *Handler) GetNamespaces(w http.ResponseWriter, r *http.Request) {
 // GetPods returns pods in a namespace
 func (h *Handler) GetPods(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
 
 	pods, err := h.k8sClient.GetPods(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch pods")
 		return
 	}
 
@@ -47,9 +73,14 @@ func (h *Handler) GetPod(w http.ResponseWriter, r *http.Request) {
 	namespace := chi.URLParam(r, "namespace")
 	name := chi.URLParam(r, "name")
 
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
 	pod, err := h.k8sClient.GetPod(r.Context(), namespace, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch pod")
 		return
 	}
 
@@ -60,7 +91,7 @@ func (h *Handler) GetPod(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 	nodes, err := h.k8sClient.GetNodes(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch nodes")
 		return
 	}
 
@@ -112,7 +143,7 @@ func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetNodeMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics, err := h.k8sClient.GetNodeMetrics(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch node metrics")
 		return
 	}
 
@@ -122,10 +153,14 @@ func (h *Handler) GetNodeMetrics(w http.ResponseWriter, r *http.Request) {
 // GetPodMetrics returns pod metrics
 func (h *Handler) GetPodMetrics(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
 
 	metrics, err := h.k8sClient.GetPodMetrics(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch pod metrics")
 		return
 	}
 
@@ -135,9 +170,14 @@ func (h *Handler) GetPodMetrics(w http.ResponseWriter, r *http.Request) {
 // GetClusterSummary returns cluster summary
 func (h *Handler) GetClusterSummary(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
+
 	summary, err := h.k8sClient.GetClusterSummary(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch cluster summary")
 		return
 	}
 
@@ -168,7 +208,7 @@ func (h *Handler) SwitchContext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.k8sClient.SwitchContext(req.Context); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		respondError(w, err, http.StatusBadRequest, "failed to switch context")
 		return
 	}
 
@@ -178,10 +218,14 @@ func (h *Handler) SwitchContext(w http.ResponseWriter, r *http.Request) {
 // GetDeployments returns deployments in a namespace
 func (h *Handler) GetDeployments(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
 
 	deployments, err := h.k8sClient.GetDeployments(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch deployments")
 		return
 	}
 
@@ -193,9 +237,14 @@ func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
 	namespace := chi.URLParam(r, "namespace")
 	name := chi.URLParam(r, "name")
 
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
 	deployment, err := h.k8sClient.GetDeployment(r.Context(), namespace, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch deployment")
 		return
 	}
 
@@ -205,10 +254,14 @@ func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
 // GetServices returns services in a namespace
 func (h *Handler) GetServices(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
 
 	services, err := h.k8sClient.GetServices(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch services")
 		return
 	}
 
@@ -220,9 +273,14 @@ func (h *Handler) GetService(w http.ResponseWriter, r *http.Request) {
 	namespace := chi.URLParam(r, "namespace")
 	name := chi.URLParam(r, "name")
 
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
 	service, err := h.k8sClient.GetService(r.Context(), namespace, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch service")
 		return
 	}
 
@@ -232,10 +290,14 @@ func (h *Handler) GetService(w http.ResponseWriter, r *http.Request) {
 // GetConfigMaps returns configmaps in a namespace
 func (h *Handler) GetConfigMaps(w http.ResponseWriter, r *http.Request) {
 	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
 
 	configmaps, err := h.k8sClient.GetConfigMaps(r.Context(), namespace)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch configmaps")
 		return
 	}
 
@@ -247,9 +309,14 @@ func (h *Handler) GetConfigMap(w http.ResponseWriter, r *http.Request) {
 	namespace := chi.URLParam(r, "namespace")
 	name := chi.URLParam(r, "name")
 
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
 	configmap, err := h.k8sClient.GetConfigMap(r.Context(), namespace, name)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch configmap")
 		return
 	}
 

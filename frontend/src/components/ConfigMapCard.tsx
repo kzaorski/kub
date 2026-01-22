@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,7 @@ interface ConfigMapCardProps {
   onClose?: () => void;
 }
 
-export function ConfigMapCard({ configmap, onClose }: ConfigMapCardProps) {
+export const ConfigMapCard = memo(function ConfigMapCard({ configmap, onClose }: ConfigMapCardProps) {
   return (
     <Card
       className={cn(
@@ -70,4 +71,4 @@ export function ConfigMapCard({ configmap, onClose }: ConfigMapCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

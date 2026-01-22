@@ -4,19 +4,24 @@ A local web application for monitoring Kubernetes clusters with attractive visua
 
 ## Features
 
-- **Real-time Pod Monitoring** - Live updates via WebSocket with lifecycle animations
+- **Real-time Monitoring** - Live updates via WebSocket with lifecycle animations
+- **Card-based UI** - Expandable cards for detailed resource information
+- **Resource Views** - Pods, Deployments, Services, ConfigMaps, Nodes
 - **Cluster Metrics** - CPU/RAM gauges and historical charts
 - **Namespace Filtering** - Switch between namespaces easily
 - **Context Switching** - Support for multiple K8s contexts
 - **Responsive Design** - Works on desktop and tablet
+- **Smart Reconnection** - Exponential backoff for WebSocket resilience
 
 ## Tech Stack
 
 ### Backend (Go)
 - `client-go` - Official Kubernetes client library
-- `chi` - Lightweight HTTP router
-- `gorilla/websocket` - WebSocket support
+- `chi` - Lightweight HTTP router with security middleware
+- `gorilla/websocket` - WebSocket support with origin checking
 - `metrics-client` - Metrics Server integration
+- Input validation with Kubernetes name regex patterns
+- Context timeout for WebSocket operations
 
 ### Frontend (React + TypeScript)
 - `Vite` - Fast build tool
@@ -24,6 +29,9 @@ A local web application for monitoring Kubernetes clusters with attractive visua
 - `Recharts` - Charts and visualizations
 - `Lucide` - Icon library
 - `Radix UI` - Accessible UI primitives
+- `TanStack Table` - Data table with pagination and sorting
+- `React.memo` - Performance optimization for components
+- `AbortController` - Request cancellation for memory leak prevention
 
 ## Requirements
 
@@ -97,19 +105,19 @@ make build
 ```
 kub/
 ├── backend/
-│   ├── cmd/kub/          # Entry point
+│   ├── cmd/kub/          # Entry point with security middleware
 │   └── internal/
 │       ├── api/          # REST & WebSocket handlers
 │       ├── k8s/          # Kubernetes client
 │       └── models/       # Shared types
 ├── frontend/
 │   └── src/
-│       ├── components/   # React components
-│       ├── hooks/        # Custom hooks
-│       ├── lib/          # Utilities
+│       ├── components/   # React components (card-based UI)
+│       ├── hooks/        # Custom hooks with AbortController
+│       ├── lib/          # Utilities (api.ts, status helpers)
 │       └── types/        # TypeScript types
 ├── Makefile
-└── docs/PLAN.md
+└── README.md
 ```
 
 ## API Endpoints
@@ -118,13 +126,36 @@ kub/
 |--------|----------|-------------|
 | GET | `/api/namespaces` | List all namespaces |
 | GET | `/api/pods?namespace=X` | List pods (optional namespace filter) |
+| GET | `/api/pods/{namespace}/{name}` | Get single pod details |
 | GET | `/api/nodes` | List all nodes |
 | GET | `/api/metrics/nodes` | Node CPU/RAM metrics |
-| GET | `/api/metrics/pods` | Pod CPU/RAM metrics |
-| GET | `/api/summary` | Cluster summary |
+| GET | `/api/metrics/pods?namespace=X` | Pod CPU/RAM metrics |
+| GET | `/api/summary?namespace=X` | Cluster summary |
 | GET | `/api/contexts` | List K8s contexts |
 | POST | `/api/contexts` | Switch context |
+| GET | `/api/deployments?namespace=X` | List deployments |
+| GET | `/api/deployments/{namespace}/{name}` | Get single deployment |
+| GET | `/api/services?namespace=X` | List services |
+| GET | `/api/services/{namespace}/{name}` | Get single service |
+| GET | `/api/configmaps?namespace=X` | List configmaps |
+| GET | `/api/configmaps/{namespace}/{name}` | Get single configmap |
 | WS | `/ws` | Real-time updates |
+
+## Security & Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | `http://localhost:5173,http://localhost:8080` |
+
+### Security Features
+
+- **Input Validation**: Kubernetes name regex validation for all namespace/name parameters
+- **Security Headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
+- **Origin Checking**: WebSocket connections validate origin header
+- **Context Timeout**: 30s timeout for WebSocket initial data fetch
+- **Generic Error Messages**: Detailed errors logged, generic messages returned to client
 
 ## Troubleshooting
 

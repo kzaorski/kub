@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { ServiceCard } from "./ServiceCard";
@@ -9,7 +10,7 @@ interface ServiceListProps {
   isLoading: boolean;
 }
 
-export function ServiceList({ services, isLoading }: ServiceListProps) {
+export const ServiceList = memo(function ServiceList({ services, isLoading }: ServiceListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -41,4 +42,4 @@ export function ServiceList({ services, isLoading }: ServiceListProps) {
       renderExpandedRow={(service, onClose) => <ServiceCard service={service} onClose={onClose} />}
     />
   );
-}
+});

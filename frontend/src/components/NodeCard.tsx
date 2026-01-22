@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatBytes, formatMillicores } from "@/lib/utils";
+import { cn, formatBytes, formatMillicores, getNodeStatusVariant, getNodeStatusColor } from "@/lib/utils";
 import type { Node } from "@/types/k8s";
 
 interface NodeCardProps {
@@ -9,21 +10,7 @@ interface NodeCardProps {
   onClose?: () => void;
 }
 
-export function NodeCard({ node, onClose }: NodeCardProps) {
-  const getStatusVariant = (
-    status: string
-  ): "default" | "success" | "warning" | "error" | "secondary" => {
-    if (status === "Ready") return "success";
-    if (status === "NotReady") return "error";
-    return "warning";
-  };
-
-  const getStatusColor = (status: string) => {
-    if (status === "Ready") return "bg-green-500";
-    if (status === "NotReady") return "bg-red-500";
-    return "bg-yellow-500";
-  };
-
+export const NodeCard = memo(function NodeCard({ node, onClose }: NodeCardProps) {
   // Show key node conditions (not Ready, as that's shown in status badge)
   const keyConditions = node.conditions?.filter(
     c => ["MemoryPressure", "DiskPressure", "PIDPressure"].includes(c.type)
@@ -34,7 +21,7 @@ export function NodeCard({ node, onClose }: NodeCardProps) {
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className={cn("h-3 w-3 rounded-full", getStatusColor(node.status))} />
+            <div className={cn("h-3 w-3 rounded-full", getNodeStatusColor(node.status))} />
             <div>
               <h3 className="font-medium text-sm">{node.name}</h3>
               <div className="flex gap-1 mt-1">
@@ -47,7 +34,7 @@ export function NodeCard({ node, onClose }: NodeCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={getStatusVariant(node.status)}>{node.status}</Badge>
+            <Badge variant={getNodeStatusVariant(node.status)}>{node.status}</Badge>
             {onClose && (
               <button
                 onClick={onClose}
@@ -171,4 +158,4 @@ export function NodeCard({ node, onClose }: NodeCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

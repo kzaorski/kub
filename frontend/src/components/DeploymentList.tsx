@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { DeploymentCard } from "./DeploymentCard";
@@ -9,7 +10,7 @@ interface DeploymentListProps {
   isLoading: boolean;
 }
 
-export function DeploymentList({ deployments, isLoading }: DeploymentListProps) {
+export const DeploymentList = memo(function DeploymentList({ deployments, isLoading }: DeploymentListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -41,4 +42,4 @@ export function DeploymentList({ deployments, isLoading }: DeploymentListProps) 
       renderExpandedRow={(deployment, onClose) => <DeploymentCard deployment={deployment} onClose={onClose} />}
     />
   );
-}
+});

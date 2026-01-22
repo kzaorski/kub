@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -15,12 +17,38 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 )
 
+// GetAllowedOrigins returns the list of allowed origins from env or defaults
+func GetAllowedOrigins() []string {
+	originsEnv := os.Getenv("ALLOWED_ORIGINS")
+	if originsEnv != "" {
+		origins := strings.Split(originsEnv, ",")
+		for i := range origins {
+			origins[i] = strings.TrimSpace(origins[i])
+		}
+		return origins
+	}
+	return []string{"http://localhost:5173", "http://localhost:8080"}
+}
+
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true // Allow requests without Origin header (same-origin)
+	}
+	allowedOrigins := GetAllowedOrigins()
+	for _, allowed := range allowedOrigins {
+		if origin == allowed {
+			return true
+		}
+	}
+	log.Printf("Rejected WebSocket connection from origin: %s", origin)
+	return false
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins in development
-	},
+	CheckOrigin:     checkOrigin,
 }
 
 // Hub manages WebSocket connections and broadcasts
@@ -65,15 +93,26 @@ func (h *Hub) Run(ctx context.Context) {
 			log.Printf("Client disconnected. Total clients: %d", len(h.clients))
 		case message := <-h.broadcast:
 			h.mu.RLock()
+			var failedConns []*websocket.Conn
 			for conn := range h.clients {
 				err := conn.WriteMessage(websocket.TextMessage, message)
 				if err != nil {
 					log.Printf("Error sending message: %v", err)
-					conn.Close()
-					delete(h.clients, conn)
+					failedConns = append(failedConns, conn)
 				}
 			}
 			h.mu.RUnlock()
+			// Clean up failed connections with write lock
+			if len(failedConns) > 0 {
+				h.mu.Lock()
+				for _, conn := range failedConns {
+					if _, ok := h.clients[conn]; ok {
+						delete(h.clients, conn)
+						conn.Close()
+					}
+				}
+				h.mu.Unlock()
+			}
 		}
 	}
 }
@@ -213,7 +252,8 @@ func (h *Hub) writePump(conn *websocket.Conn) {
 }
 
 func (h *Hub) sendInitialData(conn *websocket.Conn, namespace string) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Send pods with metrics
 	pods, err := h.k8sClient.GetPods(ctx, namespace)

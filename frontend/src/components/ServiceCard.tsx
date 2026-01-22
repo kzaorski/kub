@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Network, Globe, Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +10,7 @@ interface ServiceCardProps {
   onClose?: () => void;
 }
 
-export function ServiceCard({ service, onClose }: ServiceCardProps) {
+export const ServiceCard = memo(function ServiceCard({ service, onClose }: ServiceCardProps) {
   const getTypeVariant = (): "default" | "success" | "warning" | "error" | "secondary" => {
     const type = service.type.toLowerCase();
     if (type === "clusterip") return "secondary";
@@ -116,4 +117,4 @@ export function ServiceCard({ service, onClose }: ServiceCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

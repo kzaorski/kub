@@ -3,17 +3,8 @@ import { ArrowUpDown } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
+import { cn, getDeploymentStatusColor, getDeploymentStatusText } from "@/lib/utils"
 import type { Deployment } from "@/types/k8s"
-
-const getStatusColor = (deployment: Deployment): string => {
-  const isReady = deployment.readyReplicas === deployment.replicas && deployment.replicas > 0
-  const isProgressing = deployment.readyReplicas < deployment.replicas && deployment.readyReplicas > 0
-
-  if (isReady) return "bg-green-500"
-  if (isProgressing) return "bg-yellow-500"
-  return "bg-gray-400"
-}
 
 export const deploymentColumns: ColumnDef<Deployment>[] = [
   {
@@ -84,17 +75,15 @@ export const deploymentColumns: ColumnDef<Deployment>[] = [
     },
     cell: ({ row }) => {
       const deployment = row.original
-      const isReady = deployment.readyReplicas === deployment.replicas && deployment.replicas > 0
-      const isProgressing = deployment.readyReplicas < deployment.replicas && deployment.readyReplicas > 0
 
       return (
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className={cn("h-3 w-3 rounded-full", getStatusColor(deployment))} />
+            <div className={cn("h-3 w-3 rounded-full", getDeploymentStatusColor(deployment.readyReplicas, deployment.replicas))} />
           </TooltipTrigger>
           <TooltipContent>
             <p>
-              {isReady ? "Ready" : isProgressing ? "Progressing" : "Not Ready"}
+              {getDeploymentStatusText(deployment.readyReplicas, deployment.replicas)}
               {deployment.replicas > 0 && ` (${deployment.readyReplicas}/${deployment.replicas})`}
             </p>
           </TooltipContent>

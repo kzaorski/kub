@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { ConfigMapCard } from "./ConfigMapCard";
@@ -9,7 +10,7 @@ interface ConfigMapListProps {
   isLoading: boolean;
 }
 
-export function ConfigMapList({ configmaps, isLoading }: ConfigMapListProps) {
+export const ConfigMapList = memo(function ConfigMapList({ configmaps, isLoading }: ConfigMapListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -41,4 +42,4 @@ export function ConfigMapList({ configmaps, isLoading }: ConfigMapListProps) {
       renderExpandedRow={(configmap, onClose) => <ConfigMapCard configmap={configmap} onClose={onClose} />}
     />
   );
-}
+});

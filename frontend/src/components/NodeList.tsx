@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { NodeCard } from "./NodeCard";
@@ -9,7 +10,7 @@ interface NodeListProps {
   isLoading: boolean;
 }
 
-export function NodeList({ nodes, isLoading }: NodeListProps) {
+export const NodeList = memo(function NodeList({ nodes, isLoading }: NodeListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -45,4 +46,4 @@ export function NodeList({ nodes, isLoading }: NodeListProps) {
       renderExpandedRow={(node, onClose) => <NodeCard node={node} onClose={onClose} />}
     />
   );
-}
+});

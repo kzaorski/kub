@@ -10,10 +10,16 @@ interface UseWebSocketOptions {
   onError?: (error: Event) => void;
 }
 
+// Exponential backoff configuration
+const MIN_RECONNECT_DELAY = 1000; // 1 second
+const MAX_RECONNECT_DELAY = 30000; // 30 seconds
+const BACKOFF_MULTIPLIER = 2;
+
 export function useWebSocket(options: UseWebSocketOptions = {}) {
   const { namespace = '', contextVersion = 0 } = options;
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectDelayRef = useRef(MIN_RECONNECT_DELAY);
   const mountedRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
@@ -51,6 +57,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     ws.onopen = () => {
       if (!mountedRef.current) return;
       setIsConnected(true);
+      // Reset reconnect delay on successful connection
+      reconnectDelayRef.current = MIN_RECONNECT_DELAY;
       onConnectRef.current?.();
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -74,12 +82,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       setIsConnected(false);
       onDisconnectRef.current?.();
       wsRef.current = null;
-      // Reconnect after 3 seconds
+      // Reconnect with exponential backoff
+      const delay = reconnectDelayRef.current;
       reconnectTimeoutRef.current = setTimeout(() => {
         if (mountedRef.current) {
           connect();
         }
-      }, 3000);
+      }, delay);
+      // Increase delay for next attempt (up to max)
+      reconnectDelayRef.current = Math.min(
+        reconnectDelayRef.current * BACKOFF_MULTIPLIER,
+        MAX_RECONNECT_DELAY
+      );
     };
 
     ws.onerror = (error) => {

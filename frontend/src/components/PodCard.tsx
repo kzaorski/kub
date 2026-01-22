@@ -1,54 +1,17 @@
+import { memo, useMemo } from "react";
 import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResourceBar } from "@/components/ResourceBar";
-import { cn, getStatusColor, formatBytes, formatMillicores } from "@/lib/utils";
+import { cn, getStatusColor, formatBytes, formatMillicores, getPodStatusVariant, getContainerStatusVariant } from "@/lib/utils";
 import type { Pod } from "@/types/k8s";
-import { useMemo } from "react";
 
 interface PodCardProps {
   pod: Pod & { animationClass?: string };
   onClose?: () => void;
 }
 
-export function PodCard({ pod, onClose }: PodCardProps) {
-  const getStatusVariant = (
-    status: string
-  ): "default" | "success" | "warning" | "error" | "secondary" => {
-    const normalizedStatus = status.toLowerCase();
-    if (normalizedStatus === "running") return "success";
-    if (normalizedStatus === "pending") return "warning";
-    // Image pull errors are warnings (waiting state)
-    if (
-      normalizedStatus.includes("imagepull") ||
-      normalizedStatus.includes("registry")
-    )
-      return "warning";
-    if (
-      normalizedStatus === "failed" ||
-      normalizedStatus === "error" ||
-      normalizedStatus.includes("crash")
-    )
-      return "error";
-    return "secondary";
-  };
-
-  const getContainerVariant = (
-    state: string
-  ): "default" | "success" | "warning" | "error" | "secondary" => {
-    const s = state.toLowerCase();
-    if (s === "running") return "success";
-    if (s === "completed") return "secondary";
-    if (
-      s.includes("error") ||
-      s.includes("crash") ||
-      s.includes("oom") ||
-      s.includes("failed")
-    )
-      return "error";
-    return "warning";
-  };
-
+export const PodCard = memo(function PodCard({ pod, onClose }: PodCardProps) {
   // Container state summary
   const containerSummary = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -87,7 +50,7 @@ export function PodCard({ pod, onClose }: PodCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={getStatusVariant(pod.status)}>{pod.status}</Badge>
+            <Badge variant={getPodStatusVariant(pod.status)}>{pod.status}</Badge>
             {onClose && (
               <button
                 onClick={onClose}
@@ -158,7 +121,7 @@ export function PodCard({ pod, onClose }: PodCardProps) {
               {pod.containers.map((container) => (
                 <Badge
                   key={container.name}
-                  variant={getContainerVariant(container.state)}
+                  variant={getContainerStatusVariant(container.state)}
                   className="text-xs"
                   title={`Image: ${container.image}`}
                 >
@@ -188,4 +151,4 @@ export function PodCard({ pod, onClose }: PodCardProps) {
       </CardContent>
     </Card>
   );
-}
+});

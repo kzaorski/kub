@@ -1,21 +1,22 @@
 "use client"
 
 import { Cross2Icon } from "@radix-ui/react-icons"
+import type { Table } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-interface DataTableToolbarProps {
-  table: any
+interface DataTableToolbarProps<TData> {
+  table: Table<TData>
   searchKey: string
   searchPlaceholder: string
 }
 
-export function DataTableToolbar({
+export function DataTableToolbar<TData>({
   table,
   searchKey,
   searchPlaceholder,
-}: DataTableToolbarProps) {
+}: DataTableToolbarProps<TData>) {
   const isFiltered = table.getState().columnFilters.length > 0
 
   return (

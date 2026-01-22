@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { PodCard } from "./PodCard";
@@ -9,7 +10,7 @@ interface PodListProps {
   isLoading: boolean;
 }
 
-export function PodList({ pods, isLoading }: PodListProps) {
+export const PodList = memo(function PodList({ pods, isLoading }: PodListProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -41,4 +42,4 @@ export function PodList({ pods, isLoading }: PodListProps) {
       renderExpandedRow={(pod, onClose) => <PodCard pod={pod} onClose={onClose} />}
     />
   );
-}
+});

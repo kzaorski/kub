@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Layers, RefreshCw, Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, getDeploymentStatusVariant, getDeploymentStatusText, getDeploymentStatusColor } from "@/lib/utils";
 import type { Deployment } from "@/types/k8s";
 
 interface DeploymentCardProps {
@@ -9,24 +10,7 @@ interface DeploymentCardProps {
   onClose?: () => void;
 }
 
-export function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
-  const isReady = deployment.readyReplicas === deployment.replicas && deployment.replicas > 0;
-  const isProgressing = deployment.readyReplicas < deployment.replicas && deployment.readyReplicas > 0;
-
-  const getStatusVariant = (): "default" | "success" | "warning" | "error" | "secondary" => {
-    if (isReady) return "success";
-    if (isProgressing) return "warning";
-    if (deployment.replicas === 0) return "secondary";
-    return "error";
-  };
-
-  const getStatusText = () => {
-    if (isReady) return "Ready";
-    if (isProgressing) return "Progressing";
-    if (deployment.replicas === 0) return "No replicas";
-    return "Not Ready";
-  };
-
+export const DeploymentCard = memo(function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
   // Get selector labels
   const selectorEntries = Object.entries(deployment.selector || {}).slice(0, 4);
 
@@ -43,7 +27,7 @@ export function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
             <div
               className={cn(
                 "h-3 w-3 rounded-full",
-                isReady ? "bg-green-500" : isProgressing ? "bg-yellow-500" : "bg-gray-400"
+                getDeploymentStatusColor(deployment.readyReplicas, deployment.replicas)
               )}
             />
             <div>
@@ -52,7 +36,9 @@ export function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant={getStatusVariant()}>{getStatusText()}</Badge>
+            <Badge variant={getDeploymentStatusVariant(deployment.readyReplicas, deployment.replicas)}>
+              {getDeploymentStatusText(deployment.readyReplicas, deployment.replicas)}
+            </Badge>
             {onClose && (
               <button
                 onClick={onClose}
@@ -120,4 +106,4 @@ export function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
       </CardContent>
     </Card>
   );
-}
+});
