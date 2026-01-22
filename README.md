@@ -27,35 +27,48 @@ A local web application for monitoring Kubernetes clusters with attractive visua
 
 ## Requirements
 
-- Go 1.21+
-- Node.js 18+
-- kubectl configured (`~/.kube/config` or `%USERPROFILE%\.kube\config`)
-- Metrics Server in cluster (for CPU/RAM metrics)
+- **Go 1.25+** (check with `go version`)
+- **Node.js 20+** (check with `node -v`)
+- **kubectl configured** (`~/.kube/config` or `%USERPROFILE%\.kube\config`)
+- **Metrics Server** in cluster (for CPU/RAM metrics)
 
 ## Quick Start
 
-### macOS / Linux
+### 1. Install dependencies (required after cloning!)
 
 ```bash
-# Install dependencies
-make install
+# Backend (Go modules)
+cd backend && go mod tidy
 
-# Run in development mode (backend + frontend)
+# Frontend (npm packages)
+cd frontend && npm install
+```
+
+Or use Makefile:
+```bash
+make install
+```
+
+### 2. Run the application
+
+**Option A: Two terminals (recommended)**
+
+```bash
+# Terminal 1 - Backend
+cd backend && go run ./cmd/kub
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+```
+
+**Option B: Single command**
+```bash
 make dev
 ```
 
-### Windows (PowerShell)
-
-```powershell
-# Install dependencies
-.\scripts\install.ps1
-
-# Run in development mode
-.\scripts\dev.ps1
-```
-
-- Backend: http://localhost:8080
+**URLs:**
 - Frontend: http://localhost:5173
+- Backend API: http://localhost:8080
 
 ## Production Build
 
@@ -113,16 +126,42 @@ kub/
 | POST | `/api/contexts` | Switch context |
 | WS | `/ws` | Real-time updates |
 
+## Troubleshooting
+
+### "go: go.mod requires go >= 1.25"
+Install a newer version of Go from https://go.dev/dl/
+
+### WebSocket connection error
+Make sure the backend is running on port 8080 before starting the frontend.
+
+### No metrics displayed
+Install Metrics Server in your cluster:
+```bash
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+```
+
+For minikube:
+```bash
+minikube addons enable metrics-server
+```
+
+### kubectl not configured
+Ensure you have a valid kubeconfig:
+```bash
+kubectl cluster-info
+```
+
 ## Testing
 
-1. Start the application: `make dev`
-2. Open http://localhost:5173
-3. Test real-time updates:
+1. Start backend: `cd backend && go run ./cmd/kub`
+2. Start frontend: `cd frontend && npm run dev`
+3. Open http://localhost:5173
+4. Test real-time updates:
    ```bash
    kubectl run test-pod --image=nginx
    kubectl delete pod test-pod
    ```
-4. Observe pod animations in the UI
+5. Observe pod animations in the UI
 
 ## License
 
