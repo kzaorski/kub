@@ -91,6 +91,20 @@ func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Count pods per node and merge with nodes
+	pods, err := h.k8sClient.GetPods(r.Context(), "")
+	if err == nil {
+		podCountMap := make(map[string]int)
+		for _, p := range pods {
+			if p.Node != "" {
+				podCountMap[p.Node]++
+			}
+		}
+		for i := range nodes {
+			nodes[i].PodCount = podCountMap[nodes[i].Name]
+		}
+	}
+
 	respondJSON(w, nodes)
 }
 
