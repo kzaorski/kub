@@ -1,6 +1,7 @@
 import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ResourceBar } from "@/components/ResourceBar";
 import { cn, getStatusColor, formatBytes, formatMillicores } from "@/lib/utils";
 import type { Pod } from "@/types/k8s";
 
@@ -80,47 +81,25 @@ export function PodCard({ pod }: PodCardProps) {
           </div>
         </div>
 
-        {/* CPU Usage, Request, Limit */}
-        {(pod.cpuUsage > 0 || pod.cpuRequest > 0 || pod.cpuLimit > 0) && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-              <Cpu className="h-3 w-3" />
-              <span>CPU</span>
-            </div>
-            <div className="flex gap-4 text-xs">
-              {pod.cpuUsage > 0 && (
-                <span className="text-muted-foreground">Usage: {formatMillicores(pod.cpuUsage)}</span>
-              )}
-              {pod.cpuRequest > 0 && (
-                <span className="text-muted-foreground">Request: {formatMillicores(pod.cpuRequest)}</span>
-              )}
-              {pod.cpuLimit > 0 && (
-                <span className="text-muted-foreground">Limit: {formatMillicores(pod.cpuLimit)}</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Memory Usage, Request, Limit */}
-        {(pod.memoryUsage > 0 || pod.memoryRequest > 0 || pod.memoryLimit > 0) && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-              <MemoryStick className="h-3 w-3" />
-              <span>Memory</span>
-            </div>
-            <div className="flex gap-4 text-xs">
-              {pod.memoryUsage > 0 && (
-                <span className="text-muted-foreground">Usage: {formatBytes(pod.memoryUsage)}</span>
-              )}
-              {pod.memoryRequest > 0 && (
-                <span className="text-muted-foreground">Request: {formatBytes(pod.memoryRequest)}</span>
-              )}
-              {pod.memoryLimit > 0 && (
-                <span className="text-muted-foreground">Limit: {formatBytes(pod.memoryLimit)}</span>
-              )}
-            </div>
-          </div>
-        )}
+        {/* CPU & Memory Usage */}
+        <div className="mt-3 pt-3 border-t space-y-2">
+          <ResourceBar
+            label="CPU"
+            icon={<Cpu className="h-3 w-3" />}
+            usage={pod.cpuUsage}
+            request={pod.cpuRequest}
+            limit={pod.cpuLimit}
+            formatFn={formatMillicores}
+          />
+          <ResourceBar
+            label="Memory"
+            icon={<MemoryStick className="h-3 w-3" />}
+            usage={pod.memoryUsage}
+            request={pod.memoryRequest}
+            limit={pod.memoryLimit}
+            formatFn={formatBytes}
+          />
+        </div>
 
         {/* Containers */}
         {pod.containers.length > 0 && (

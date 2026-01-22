@@ -23,9 +23,9 @@ export function NodeCard({ node }: NodeCardProps) {
     return "bg-yellow-500";
   };
 
-  // Filter important conditions (non-ready conditions)
-  const importantConditions = node.conditions?.filter(
-    c => c.type !== "Ready" && c.status !== "True"
+  // Show key node conditions (not Ready, as that's shown in status badge)
+  const keyConditions = node.conditions?.filter(
+    c => ["MemoryPressure", "DiskPressure", "PIDPressure"].includes(c.type)
   ) || [];
 
   return (
@@ -80,7 +80,7 @@ export function NodeCard({ node }: NodeCardProps) {
             <Cpu className="h-3 w-3" />
             <span>CPU</span>
           </div>
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1 text-xs max-w-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Capacity:</span>
               <span>{formatMillicores(node.cpuCapacity)}</span>
@@ -106,7 +106,7 @@ export function NodeCard({ node }: NodeCardProps) {
             <MemoryStick className="h-3 w-3" />
             <span>Memory</span>
           </div>
-          <div className="space-y-1 text-xs">
+          <div className="space-y-1 text-xs max-w-xs">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Capacity:</span>
               <span>{formatBytes(node.memoryCapacity)}</span>
@@ -134,20 +134,20 @@ export function NodeCard({ node }: NodeCardProps) {
               <span>Pods</span>
             </div>
             <div className="text-xs">
-              <span className="text-muted-foreground">{node.podCount} / {node.podCapacity}</span>
+              {node.podCount} / {node.podCapacity}
             </div>
           </div>
         )}
 
         {/* Conditions */}
-        {importantConditions.length > 0 && (
+        {keyConditions.length > 0 && (
           <div className="mt-3 pt-3 border-t">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+              <AlertTriangle className="h-3 w-3" />
               <span>Conditions</span>
             </div>
             <div className="space-y-1">
-              {importantConditions.map((cond, idx) => (
+              {keyConditions.map((cond, idx) => (
                 <div key={idx} className="text-xs">
                   <span className="font-medium">{cond.type}</span>
                   {cond.reason && <span className="text-muted-foreground">: {cond.reason}</span>}
