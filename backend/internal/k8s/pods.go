@@ -170,14 +170,38 @@ func getPodStatus(pod corev1.Pod) string {
 		}
 	}
 
-	// Check container statuses
+	// Check container statuses - prioritize error states
 	for _, cs := range pod.Status.ContainerStatuses {
+		// Check current waiting state (e.g., CrashLoopBackOff, ImagePullBackOff)
 		if cs.State.Waiting != nil && cs.State.Waiting.Reason != "" {
 			return cs.State.Waiting.Reason
+		}
+		// Check last terminated state for failed containers (e.g., when container crashes and is waiting to restart)
+		if cs.LastTerminationState.Terminated != nil && cs.LastTerminationState.Terminated.ExitCode != 0 {
+			// Container previously failed with error
+			if cs.State.Waiting != nil {
+				// Currently waiting to restart - return the waiting reason
+				if cs.State.Waiting.Reason != "" {
+					return cs.State.Waiting.Reason
+				}
+				return "CrashLoopBackOff"
+			}
 		}
 		if cs.State.Terminated != nil && cs.State.Terminated.Reason != "" {
 			return cs.State.Terminated.Reason
 		}
+	}
+
+	// Check if not all containers are ready
+	readyCount := 0
+	for _, cs := range pod.Status.ContainerStatuses {
+		if cs.Ready {
+			readyCount++
+		}
+	}
+	if readyCount < len(pod.Status.ContainerStatuses) && len(pod.Status.ContainerStatuses) > 0 {
+		// At least one container is not ready
+		return string(pod.Status.Phase)
 	}
 
 	// Check conditions
