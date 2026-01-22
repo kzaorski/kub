@@ -215,11 +215,27 @@ func (h *Hub) writePump(conn *websocket.Conn) {
 func (h *Hub) sendInitialData(conn *websocket.Conn, namespace string) {
 	ctx := context.Background()
 
-	// Send pods
+	// Send pods with metrics
 	pods, err := h.k8sClient.GetPods(ctx, namespace)
 	if err != nil {
 		log.Printf("Failed to get initial pods: %v", err)
 	} else {
+		// Merge pod metrics into pods
+		podMetrics, metricsErr := h.k8sClient.GetPodMetrics(ctx, namespace)
+		if metricsErr == nil {
+			metricsMap := make(map[string]models.PodMetrics)
+			for _, m := range podMetrics {
+				key := m.Namespace + "/" + m.Name
+				metricsMap[key] = m
+			}
+			for i := range pods {
+				key := pods[i].Namespace + "/" + pods[i].Name
+				if m, ok := metricsMap[key]; ok {
+					pods[i].CPUUsage = m.CPUUsage
+					pods[i].MemoryUsage = m.MemoryUsage
+				}
+			}
+		}
 		data, _ := json.Marshal(map[string]interface{}{
 			"type": "pods",
 			"data": pods,

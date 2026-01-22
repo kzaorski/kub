@@ -56,12 +56,39 @@ func (h *Handler) GetPod(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, pod)
 }
 
-// GetNodes returns all nodes
+// GetNodes returns all nodes with metrics
 func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 	nodes, err := h.k8sClient.GetNodes(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	// Fetch and merge metrics with nodes
+	metrics, err := h.k8sClient.GetNodeMetrics(r.Context())
+	if err == nil {
+		metricsMap := make(map[string]struct {
+			cpuUsage    int64
+			memUsage    int64
+			cpuPercent  float64
+			memPercent  float64
+		})
+		for _, m := range metrics {
+			metricsMap[m.Name] = struct {
+				cpuUsage    int64
+				memUsage    int64
+				cpuPercent  float64
+				memPercent  float64
+			}{m.CPUUsage, m.MemoryUsage, m.CPUPercent, m.MemPercent}
+		}
+		for i := range nodes {
+			if m, ok := metricsMap[nodes[i].Name]; ok {
+				nodes[i].CPUUsage = m.cpuUsage
+				nodes[i].MemoryUsage = m.memUsage
+				nodes[i].CPUPercent = m.cpuPercent
+				nodes[i].MemoryPercent = m.memPercent
+			}
+		}
 	}
 
 	respondJSON(w, nodes)
