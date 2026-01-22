@@ -5,14 +5,13 @@ import {
   Activity,
   AlertCircle,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Layers,
   Network,
   FileText,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PodList } from "./PodList";
 import { NodeList } from "./NodeList";
 import { DeploymentList } from "./DeploymentList";
@@ -27,12 +26,9 @@ import { useServices } from "@/hooks/useServices";
 import { useConfigMaps } from "@/hooks/useConfigMaps";
 import { formatBytes, formatMillicores } from "@/lib/utils";
 
-type OpenSection = "nodes" | "pods" | "deployments" | "services" | "configmaps" | null;
-
 export function Dashboard() {
   const [namespace, setNamespace] = useState("all");
   const [contextVersion, setContextVersion] = useState(0);
-  const [openSection, setOpenSection] = useState<OpenSection>(null);
   const { pods, summary, isLoading, error, isConnected } =
     usePods(namespace, contextVersion);
   const { nodes, isLoading: nodesLoading } = useNodes(contextVersion);
@@ -86,136 +82,6 @@ export function Dashboard() {
           </div>
         )}
 
-        {/* Summary Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          <Card
-            className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setOpenSection(openSection === "nodes" ? null : "nodes")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Nodes</CardTitle>
-              <div className="flex items-center gap-1">
-                <Server className="h-4 w-4 text-muted-foreground" />
-                {openSection === "nodes" ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {summary?.readyNodes ?? "-"}/{summary?.totalNodes ?? "-"}
-              </div>
-              <p className="text-xs text-muted-foreground">Ready nodes</p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setOpenSection(openSection === "pods" ? null : "pods")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pods</CardTitle>
-              <div className="flex items-center gap-1">
-                <Box className="h-4 w-4 text-muted-foreground" />
-                {openSection === "pods" ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {summary?.runningPods ?? "-"}/{summary?.totalPods ?? "-"}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Running pods
-                {summary && summary.pendingPods > 0 && (
-                  <span className="text-yellow-600">
-                    {" "}
-                    ({summary.pendingPods} pending)
-                  </span>
-                )}
-                {summary && summary.failedPods > 0 && (
-                  <span className="text-red-600">
-                    {" "}
-                    ({summary.failedPods} failed)
-                  </span>
-                )}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setOpenSection(openSection === "deployments" ? null : "deployments")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Deployments</CardTitle>
-              <div className="flex items-center gap-1">
-                <Layers className="h-4 w-4 text-muted-foreground" />
-                {openSection === "deployments" ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{deployments.length}</div>
-              <p className="text-xs text-muted-foreground">
-                {deployments.filter(d => d.readyReplicas === d.replicas && d.replicas > 0).length} ready
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setOpenSection(openSection === "services" ? null : "services")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Services</CardTitle>
-              <div className="flex items-center gap-1">
-                <Network className="h-4 w-4 text-muted-foreground" />
-                {openSection === "services" ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{services.length}</div>
-              <p className="text-xs text-muted-foreground">Total services</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4 mb-6">
-          <Card
-            className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setOpenSection(openSection === "configmaps" ? null : "configmaps")}
-          >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">ConfigMaps</CardTitle>
-              <div className="flex items-center gap-1">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                {openSection === "configmaps" ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{configmaps.length}</div>
-              <p className="text-xs text-muted-foreground">Total configmaps</p>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Cluster Utilization */}
         <Card className="mb-6">
           <CardHeader className="pb-2">
@@ -264,85 +130,47 @@ export function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Nodes Section */}
-        {openSection === "nodes" && (
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Server className="h-5 w-5" />
-                Nodes
-                <Badge variant="secondary" className="ml-2">
-                  {nodes.length}
-                </Badge>
-              </h2>
-            </div>
+        {/* Resource Tabs */}
+        <Tabs defaultValue="nodes" className="mb-6">
+          <TabsList>
+            <TabsTrigger value="nodes">
+              <Server className="h-4 w-4 mr-2" />
+              Nodes ({summary?.readyNodes ?? "-"}/{summary?.totalNodes ?? "-"})
+            </TabsTrigger>
+            <TabsTrigger value="pods">
+              <Box className="h-4 w-4 mr-2" />
+              Pods ({summary?.runningPods ?? "-"}/{summary?.totalPods ?? "-"})
+            </TabsTrigger>
+            <TabsTrigger value="deployments">
+              <Layers className="h-4 w-4 mr-2" />
+              Deployments ({deployments.length})
+            </TabsTrigger>
+            <TabsTrigger value="services">
+              <Network className="h-4 w-4 mr-2" />
+              Services ({services.length})
+            </TabsTrigger>
+            <TabsTrigger value="configmaps">
+              <FileText className="h-4 w-4 mr-2" />
+              ConfigMaps ({configmaps.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="nodes">
             <NodeList nodes={nodes} isLoading={nodesLoading} />
-          </div>
-        )}
-
-        {/* Pods Section */}
-        {openSection === "pods" && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Box className="h-5 w-5" />
-                Pods
-                <Badge variant="secondary" className="ml-2">
-                  {pods.length}
-                </Badge>
-              </h2>
-            </div>
+          </TabsContent>
+          <TabsContent value="pods">
             <PodList pods={pods} isLoading={isLoading} />
-          </div>
-        )}
-
-        {/* Deployments Section */}
-        {openSection === "deployments" && (
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Layers className="h-5 w-5" />
-                Deployments
-                <Badge variant="secondary" className="ml-2">
-                  {deployments.length}
-                </Badge>
-              </h2>
-            </div>
+          </TabsContent>
+          <TabsContent value="deployments">
             <DeploymentList deployments={deployments} isLoading={deploymentsLoading} />
-          </div>
-        )}
-
-        {/* Services Section */}
-        {openSection === "services" && (
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Network className="h-5 w-5" />
-                Services
-                <Badge variant="secondary" className="ml-2">
-                  {services.length}
-                </Badge>
-              </h2>
-            </div>
+          </TabsContent>
+          <TabsContent value="services">
             <ServiceList services={services} isLoading={servicesLoading} />
-          </div>
-        )}
-
-        {/* ConfigMaps Section */}
-        {openSection === "configmaps" && (
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                ConfigMaps
-                <Badge variant="secondary" className="ml-2">
-                  {configmaps.length}
-                </Badge>
-              </h2>
-            </div>
+          </TabsContent>
+          <TabsContent value="configmaps">
             <ConfigMapList configmaps={configmaps} isLoading={configmapsLoading} />
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
