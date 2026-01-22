@@ -1,4 +1,4 @@
-import { Layers, RefreshCw, Clock } from "lucide-react";
+import { Layers, RefreshCw, Clock, Hash } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -25,6 +25,9 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
     if (deployment.replicas === 0) return "No replicas";
     return "Not Ready";
   };
+
+  // Get selector labels
+  const selectorEntries = Object.entries(deployment.selector || {}).slice(0, 4);
 
   return (
     <Card
@@ -67,10 +70,39 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
           </div>
         </div>
 
+        {/* Detailed Replica Status */}
         {(deployment.updatedReplicas < deployment.replicas || deployment.availableReplicas < deployment.replicas) && (
-          <div className="mt-3 pt-3 border-t flex gap-4 text-xs text-muted-foreground">
-            <span>Updated: {deployment.updatedReplicas}/{deployment.replicas}</span>
-            <span>Available: {deployment.availableReplicas}/{deployment.replicas}</span>
+          <div className="mt-3 pt-3 border-t grid grid-cols-2 gap-2 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Updated:</span>
+              <span>{deployment.updatedReplicas}/{deployment.replicas}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Available:</span>
+              <span>{deployment.availableReplicas}/{deployment.replicas}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Selector */}
+        {selectorEntries.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+              <Hash className="h-3 w-3" />
+              <span>Selector</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {selectorEntries.map(([key, value]) => (
+                <Badge key={key} variant="outline" className="text-xs font-mono">
+                  {key}={value}
+                </Badge>
+              ))}
+              {Object.keys(deployment.selector || {}).length > 4 && (
+                <Badge variant="outline" className="text-xs">
+                  +{Object.keys(deployment.selector || {}).length - 4} more
+                </Badge>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

@@ -29,14 +29,12 @@ import { useServices } from "@/hooks/useServices";
 import { useConfigMaps } from "@/hooks/useConfigMaps";
 import { formatBytes, formatMillicores } from "@/lib/utils";
 
+type OpenSection = "nodes" | "pods" | "deployments" | "services" | "configmaps" | null;
+
 export function Dashboard() {
   const [namespace, setNamespace] = useState("all");
   const [contextVersion, setContextVersion] = useState(0);
-  const [showPodList, setShowPodList] = useState(false);
-  const [showNodeList, setShowNodeList] = useState(false);
-  const [showDeploymentList, setShowDeploymentList] = useState(false);
-  const [showServiceList, setShowServiceList] = useState(false);
-  const [showConfigMapList, setShowConfigMapList] = useState(false);
+  const [openSection, setOpenSection] = useState<OpenSection>(null);
   const { pods, summary, isLoading, error, isConnected } =
     usePods(namespace, contextVersion);
   const { nodes, isLoading: nodesLoading } = useNodes(contextVersion);
@@ -94,13 +92,13 @@ export function Dashboard() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
           <Card
             className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setShowNodeList(!showNodeList)}
+            onClick={() => setOpenSection(openSection === "nodes" ? null : "nodes")}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Nodes</CardTitle>
               <div className="flex items-center gap-1">
                 <Server className="h-4 w-4 text-muted-foreground" />
-                {showNodeList ? (
+                {openSection === "nodes" ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -117,13 +115,13 @@ export function Dashboard() {
 
           <Card
             className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setShowPodList(!showPodList)}
+            onClick={() => setOpenSection(openSection === "pods" ? null : "pods")}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pods</CardTitle>
               <div className="flex items-center gap-1">
                 <Box className="h-4 w-4 text-muted-foreground" />
-                {showPodList ? (
+                {openSection === "pods" ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -154,13 +152,13 @@ export function Dashboard() {
 
           <Card
             className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setShowDeploymentList(!showDeploymentList)}
+            onClick={() => setOpenSection(openSection === "deployments" ? null : "deployments")}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Deployments</CardTitle>
               <div className="flex items-center gap-1">
                 <Layers className="h-4 w-4 text-muted-foreground" />
-                {showDeploymentList ? (
+                {openSection === "deployments" ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -177,13 +175,13 @@ export function Dashboard() {
 
           <Card
             className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setShowServiceList(!showServiceList)}
+            onClick={() => setOpenSection(openSection === "services" ? null : "services")}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Services</CardTitle>
               <div className="flex items-center gap-1">
                 <Network className="h-4 w-4 text-muted-foreground" />
-                {showServiceList ? (
+                {openSection === "services" ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -197,52 +195,16 @@ export function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-              <Cpu className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {summary?.cpuPercent?.toFixed(1) ?? "-"}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {summary
-                  ? `${formatMillicores(summary.usedCpu)} / ${formatMillicores(summary.totalCpu)}`
-                  : "-"}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Memory Usage
-              </CardTitle>
-              <MemoryStick className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {summary?.memoryPercent?.toFixed(1) ?? "-"}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {summary
-                  ? `${formatBytes(summary.usedMemory)} / ${formatBytes(summary.totalMemory)}`
-                  : "-"}
-              </p>
-            </CardContent>
-          </Card>
-
+        <div className="grid gap-4 md:grid-cols-4 mb-6">
           <Card
             className="cursor-pointer transition-colors hover:bg-accent/50"
-            onClick={() => setShowConfigMapList(!showConfigMapList)}
+            onClick={() => setOpenSection(openSection === "configmaps" ? null : "configmaps")}
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">ConfigMaps</CardTitle>
               <div className="flex items-center gap-1">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                {showConfigMapList ? (
+                {openSection === "configmaps" ? (
                   <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 ) : (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -254,8 +216,6 @@ export function Dashboard() {
               <p className="text-xs text-muted-foreground">Total configmaps</p>
             </CardContent>
           </Card>
-
-          <Card></Card>
         </div>
 
         {/* Cluster Utilization */}
@@ -267,25 +227,47 @@ export function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-around max-w-md">
+            <div className="grid gap-6 md:grid-cols-4">
               <GaugeChart
                 value={summary?.cpuPercent ?? 0}
                 label="CPU"
                 sublabel={summary ? formatMillicores(summary.usedCpu) : "-"}
-                size="md"
+                size="lg"
               />
               <GaugeChart
                 value={summary?.memoryPercent ?? 0}
                 label="Memory"
                 sublabel={summary ? formatBytes(summary.usedMemory) : "-"}
-                size="md"
+                size="lg"
               />
+              <div className="flex flex-col justify-center">
+                <div className="text-sm text-muted-foreground mb-1">CPU Usage</div>
+                <div className="text-2xl font-bold">
+                  {summary?.cpuPercent?.toFixed(1) ?? "-"}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {summary
+                    ? `${formatMillicores(summary.usedCpu)} / ${formatMillicores(summary.totalCpu)}`
+                    : "-"}
+                </p>
+              </div>
+              <div className="flex flex-col justify-center">
+                <div className="text-sm text-muted-foreground mb-1">Memory Usage</div>
+                <div className="text-2xl font-bold">
+                  {summary?.memoryPercent?.toFixed(1) ?? "-"}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {summary
+                    ? `${formatBytes(summary.usedMemory)} / ${formatBytes(summary.totalMemory)}`
+                    : "-"}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Nodes Section */}
-        {showNodeList && (
+        {openSection === "nodes" && (
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -301,7 +283,7 @@ export function Dashboard() {
         )}
 
         {/* Pods Section */}
-        {showPodList && (
+        {openSection === "pods" && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -317,7 +299,7 @@ export function Dashboard() {
         )}
 
         {/* Deployments Section */}
-        {showDeploymentList && (
+        {openSection === "deployments" && (
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -333,7 +315,7 @@ export function Dashboard() {
         )}
 
         {/* Services Section */}
-        {showServiceList && (
+        {openSection === "services" && (
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">
@@ -349,7 +331,7 @@ export function Dashboard() {
         )}
 
         {/* ConfigMaps Section */}
-        {showConfigMapList && (
+        {openSection === "configmaps" && (
           <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold flex items-center gap-2">

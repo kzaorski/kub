@@ -1,4 +1,4 @@
-import { Server, Cpu, MemoryStick, Globe, Clock } from "lucide-react";
+import { Server, Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatBytes, formatMillicores } from "@/lib/utils";
@@ -70,6 +70,11 @@ function NodeCard({ node }: { node: Node }) {
     return "bg-yellow-500";
   };
 
+  // Filter important conditions (non-ready conditions)
+  const importantConditions = node.conditions?.filter(
+    c => c.type !== "Ready" && c.status !== "True"
+  ) || [];
+
   return (
     <Card className="transition-all duration-300 hover:shadow-md">
       <CardContent className="p-4">
@@ -99,34 +104,105 @@ function NodeCard({ node }: { node: Node }) {
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-4 w-4" />
-            <span>{node.version}</span>
+            <span>Age: {node.age}</span>
           </div>
         </div>
 
+        {/* Version Info */}
+        <div className="mt-3 pt-3 border-t text-xs text-muted-foreground space-y-1">
+          <div className="flex items-center gap-2">
+            <span>K8s: {node.version}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>Runtime: {node.containerRuntime || "-"}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{node.os} ({node.architecture})</span>
+          </div>
+        </div>
+
+        {/* CPU Resources */}
         <div className="mt-3 pt-3 border-t">
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <Cpu className="h-4 w-4" />
-              <span>
-                {node.cpuPercent !== undefined
-                  ? `${node.cpuPercent.toFixed(1)}%`
-                  : formatMillicores(node.cpuCapacity)}
-              </span>
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+            <Cpu className="h-3 w-3" />
+            <span>CPU</span>
+          </div>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Capacity:</span>
+              <span>{formatMillicores(node.cpuCapacity)}</span>
             </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
-              <MemoryStick className="h-4 w-4" />
-              <span>
-                {node.memoryPercent !== undefined
-                  ? `${node.memoryPercent.toFixed(1)}%`
-                  : formatBytes(node.memoryCapacity)}
-              </span>
-            </div>
+            {node.cpuAllocatable > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Allocatable:</span>
+                <span>{formatMillicores(node.cpuAllocatable)}</span>
+              </div>
+            )}
+            {node.cpuUsage > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Usage:</span>
+                <span>{formatMillicores(node.cpuUsage)} ({node.cpuPercent?.toFixed(1)}%)</span>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="mt-2 text-xs text-muted-foreground">
-          {node.os} ({node.architecture})
+        {/* Memory Resources */}
+        <div className="mt-3 pt-3 border-t">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+            <MemoryStick className="h-3 w-3" />
+            <span>Memory</span>
+          </div>
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Capacity:</span>
+              <span>{formatBytes(node.memoryCapacity)}</span>
+            </div>
+            {node.memoryAllocatable > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Allocatable:</span>
+                <span>{formatBytes(node.memoryAllocatable)}</span>
+              </div>
+            )}
+            {node.memoryUsage > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Usage:</span>
+                <span>{formatBytes(node.memoryUsage)} ({node.memoryPercent?.toFixed(1)}%)</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Pods */}
+        {node.podCapacity > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+              <Package className="h-3 w-3" />
+              <span>Pods</span>
+            </div>
+            <div className="text-xs">
+              <span className="text-muted-foreground">{node.podCount} / {node.podCapacity}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Conditions */}
+        {importantConditions.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+              <AlertTriangle className="h-3 w-3 text-yellow-500" />
+              <span>Conditions</span>
+            </div>
+            <div className="space-y-1">
+              {importantConditions.map((cond, idx) => (
+                <div key={idx} className="text-xs">
+                  <span className="font-medium">{cond.type}</span>
+                  {cond.reason && <span className="text-muted-foreground">: {cond.reason}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

@@ -13,6 +13,10 @@ export interface Pod {
   containers: Container[];
   cpuUsage: number;
   memoryUsage: number;
+  cpuRequest: number;
+  cpuLimit: number;
+  memoryRequest: number;
+  memoryLimit: number;
 }
 
 export interface Container {
@@ -33,17 +37,31 @@ export interface Node {
   status: string;
   roles: string[];
   version: string;
+  kernelVersion: string;
+  containerRuntime: string;
   internalIP: string;
   os: string;
   architecture: string;
   cpuCapacity: number;
   memoryCapacity: number;
+  cpuAllocatable: number;
+  memoryAllocatable: number;
+  podCapacity: number;
   cpuUsage: number;
   memoryUsage: number;
   cpuPercent: number;
   memoryPercent: number;
   podCount: number;
+  age: string;
   createdAt: string;
+  conditions: NodeCondition[];
+}
+
+export interface NodeCondition {
+  type: string;
+  status: string;
+  reason: string;
+  message: string;
 }
 
 export interface Context {
@@ -108,6 +126,7 @@ export interface Deployment {
   updatedReplicas: number;
   availableReplicas: number;
   strategy: string;
+  selector: Record<string, string>;
   labels: Record<string, string>;
   age: string;
   createdAt: string;

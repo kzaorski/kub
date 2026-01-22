@@ -62,6 +62,9 @@ func (c *Client) WatchPods(ctx context.Context, namespace string) (watch.Interfa
 func convertPod(p corev1.Pod) models.Pod {
 	containers := make([]models.Container, 0, len(p.Spec.Containers))
 
+	// Calculate total resource requests and limits
+	var totalCPURequest, totalCPULimit, totalMemRequest, totalMemLimit int64
+
 	for _, c := range p.Spec.Containers {
 		container := models.Container{
 			Name:  c.Name,
@@ -75,6 +78,26 @@ func convertPod(p corev1.Pod) models.Pod {
 				container.RestartCount = cs.RestartCount
 				container.State = getContainerState(cs.State)
 				break
+			}
+		}
+
+		// Accumulate resource requests
+		if c.Resources.Requests != nil {
+			if cpu := c.Resources.Requests.Cpu(); cpu != nil {
+				totalCPURequest += cpu.MilliValue()
+			}
+			if mem := c.Resources.Requests.Memory(); mem != nil {
+				totalMemRequest += mem.Value()
+			}
+		}
+
+		// Accumulate resource limits
+		if c.Resources.Limits != nil {
+			if cpu := c.Resources.Limits.Cpu(); cpu != nil {
+				totalCPULimit += cpu.MilliValue()
+			}
+			if mem := c.Resources.Limits.Memory(); mem != nil {
+				totalMemLimit += mem.Value()
 			}
 		}
 
@@ -107,18 +130,22 @@ func convertPod(p corev1.Pod) models.Pod {
 	status := getPodStatus(p)
 
 	return models.Pod{
-		Name:       p.Name,
-		Namespace:  p.Namespace,
-		Status:     status,
-		Phase:      string(p.Status.Phase),
-		Ready:      ready,
-		Restarts:   totalRestarts,
-		Age:        age,
-		IP:         ip,
-		Node:       p.Spec.NodeName,
-		Labels:     p.Labels,
-		CreatedAt:  p.CreationTimestamp.Time,
-		Containers: containers,
+		Name:          p.Name,
+		Namespace:     p.Namespace,
+		Status:        status,
+		Phase:         string(p.Status.Phase),
+		Ready:         ready,
+		Restarts:      totalRestarts,
+		Age:           age,
+		IP:            ip,
+		Node:          p.Spec.NodeName,
+		Labels:        p.Labels,
+		CreatedAt:     p.CreationTimestamp.Time,
+		Containers:    containers,
+		CPURequest:    totalCPURequest,
+		CPULimit:      totalCPULimit,
+		MemoryRequest: totalMemRequest,
+		MemoryLimit:   totalMemLimit,
 	}
 }
 

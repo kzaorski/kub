@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/krzyzao/kub/internal/models"
 	corev1 "k8s.io/api/core/v1"
@@ -63,17 +64,43 @@ func convertNode(n corev1.Node) models.Node {
 	// Get capacity
 	cpuCapacity := n.Status.Capacity.Cpu().MilliValue()
 	memCapacity := n.Status.Capacity.Memory().Value()
+	podCapacity := n.Status.Capacity.Pods().Value()
+
+	// Get allocatable
+	cpuAllocatable := n.Status.Allocatable.Cpu().MilliValue()
+	memAllocatable := n.Status.Allocatable.Memory().Value()
+
+	// Get conditions
+	conditions := make([]models.NodeCondition, 0, len(n.Status.Conditions))
+	for _, cond := range n.Status.Conditions {
+		conditions = append(conditions, models.NodeCondition{
+			Type:    string(cond.Type),
+			Status:  string(cond.Status),
+			Reason:  cond.Reason,
+			Message: cond.Message,
+		})
+	}
+
+	// Calculate age
+	age := formatDuration(time.Since(n.CreationTimestamp.Time))
 
 	return models.Node{
-		Name:           n.Name,
-		Status:         status,
-		Roles:          roles,
-		Version:        n.Status.NodeInfo.KubeletVersion,
-		InternalIP:     internalIP,
-		OS:             n.Status.NodeInfo.OSImage,
-		Architecture:   n.Status.NodeInfo.Architecture,
-		CPUCapacity:    cpuCapacity,
-		MemoryCapacity: memCapacity,
-		CreatedAt:      n.CreationTimestamp.Time,
+		Name:              n.Name,
+		Status:            status,
+		Roles:             roles,
+		Version:           n.Status.NodeInfo.KubeletVersion,
+		KernelVersion:     n.Status.NodeInfo.KernelVersion,
+		ContainerRuntime:  n.Status.NodeInfo.ContainerRuntimeVersion,
+		InternalIP:        internalIP,
+		OS:                n.Status.NodeInfo.OSImage,
+		Architecture:      n.Status.NodeInfo.Architecture,
+		CPUCapacity:       cpuCapacity,
+		MemoryCapacity:    memCapacity,
+		CPUAllocatable:    cpuAllocatable,
+		MemoryAllocatable: memAllocatable,
+		PodCapacity:       podCapacity,
+		Age:               age,
+		CreatedAt:         n.CreationTimestamp.Time,
+		Conditions:        conditions,
 	}
 }

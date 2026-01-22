@@ -17,6 +17,9 @@ export function ServiceCard({ service }: ServiceCardProps) {
     return "default";
   };
 
+  // Get selector labels
+  const selectorEntries = Object.entries(service.selector || {}).slice(0, 3);
+
   return (
     <Card
       className={cn(
@@ -49,6 +52,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
           </div>
         </div>
 
+        {/* Ports */}
         {service.ports.length > 0 && (
           <div className="mt-3 pt-3 border-t">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
@@ -66,12 +70,35 @@ export function ServiceCard({ service }: ServiceCardProps) {
           </div>
         )}
 
+        {/* External IP */}
         {service.externalIP && service.externalIP !== "-" && (
           <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm text-muted-foreground">
             <Globe className="h-4 w-4" />
             <span className="truncate" title={service.externalIP}>
               {service.externalIP}
             </span>
+          </div>
+        )}
+
+        {/* Selector */}
+        {selectorEntries.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
+              <Hash className="h-3 w-3" />
+              <span>Selector</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {selectorEntries.map(([key, value]) => (
+                <Badge key={key} variant="outline" className="text-xs font-mono">
+                  {key}={value}
+                </Badge>
+              ))}
+              {Object.keys(service.selector || {}).length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{Object.keys(service.selector || {}).length - 3} more
+                </Badge>
+              )}
+            </div>
           </div>
         )}
       </CardContent>

@@ -4,20 +4,24 @@ import "time"
 
 // Pod represents a Kubernetes pod with relevant information
 type Pod struct {
-	Name         string            `json:"name"`
-	Namespace    string            `json:"namespace"`
-	Status       string            `json:"status"`
-	Phase        string            `json:"phase"`
-	Ready        string            `json:"ready"`
-	Restarts     int32             `json:"restarts"`
-	Age          string            `json:"age"`
-	IP           string            `json:"ip"`
-	Node         string            `json:"node"`
-	Labels       map[string]string `json:"labels"`
-	CreatedAt    time.Time         `json:"createdAt"`
-	Containers   []Container       `json:"containers"`
-	CPUUsage     int64             `json:"cpuUsage"`     // millicores
-	MemoryUsage  int64             `json:"memoryUsage"`  // bytes
+	Name              string            `json:"name"`
+	Namespace         string            `json:"namespace"`
+	Status            string            `json:"status"`
+	Phase             string            `json:"phase"`
+	Ready             string            `json:"ready"`
+	Restarts          int32             `json:"restarts"`
+	Age               string            `json:"age"`
+	IP                string            `json:"ip"`
+	Node              string            `json:"node"`
+	Labels            map[string]string `json:"labels"`
+	CreatedAt         time.Time         `json:"createdAt"`
+	Containers        []Container       `json:"containers"`
+	CPUUsage          int64             `json:"cpuUsage"`          // millicores
+	MemoryUsage       int64             `json:"memoryUsage"`       // bytes
+	CPURequest        int64             `json:"cpuRequest"`        // millicores
+	CPULimit          int64             `json:"cpuLimit"`          // millicores
+	MemoryRequest     int64             `json:"memoryRequest"`     // bytes
+	MemoryLimit       int64             `json:"memoryLimit"`       // bytes
 }
 
 // Container represents a container within a pod
@@ -37,21 +41,36 @@ type Namespace struct {
 
 // Node represents a Kubernetes node
 type Node struct {
-	Name             string    `json:"name"`
-	Status           string    `json:"status"`
-	Roles            []string  `json:"roles"`
-	Version          string    `json:"version"`
-	InternalIP       string    `json:"internalIP"`
-	OS               string    `json:"os"`
-	Architecture     string    `json:"architecture"`
-	CPUCapacity      int64     `json:"cpuCapacity"`      // millicores
-	MemoryCapacity   int64     `json:"memoryCapacity"`   // bytes
-	CPUUsage         int64     `json:"cpuUsage"`         // millicores
-	MemoryUsage      int64     `json:"memoryUsage"`      // bytes
-	CPUPercent       float64   `json:"cpuPercent"`
-	MemoryPercent    float64   `json:"memoryPercent"`
-	PodCount         int       `json:"podCount"`
-	CreatedAt        time.Time `json:"createdAt"`
+	Name               string            `json:"name"`
+	Status             string            `json:"status"`
+	Roles              []string          `json:"roles"`
+	Version            string            `json:"version"`
+	KernelVersion      string            `json:"kernelVersion"`
+	ContainerRuntime   string            `json:"containerRuntime"`
+	InternalIP         string            `json:"internalIP"`
+	OS                 string            `json:"os"`
+	Architecture       string            `json:"architecture"`
+	CPUCapacity        int64             `json:"cpuCapacity"`        // millicores
+	MemoryCapacity     int64             `json:"memoryCapacity"`     // bytes
+	CPUAllocatable     int64             `json:"cpuAllocatable"`     // millicores
+	MemoryAllocatable  int64             `json:"memoryAllocatable"`  // bytes
+	PodCapacity        int64             `json:"podCapacity"`
+	CPUUsage           int64             `json:"cpuUsage"`           // millicores
+	MemoryUsage        int64             `json:"memoryUsage"`        // bytes
+	CPUPercent         float64           `json:"cpuPercent"`
+	MemoryPercent      float64           `json:"memoryPercent"`
+	PodCount           int               `json:"podCount"`
+	Age                string            `json:"age"`
+	CreatedAt          time.Time         `json:"createdAt"`
+	Conditions         []NodeCondition   `json:"conditions"`
+}
+
+// NodeCondition represents a node condition
+type NodeCondition struct {
+	Type    string `json:"type"`
+	Status  string `json:"status"`
+	Reason  string `json:"reason"`
+	Message string `json:"message"`
 }
 
 // Context represents a Kubernetes context
@@ -118,6 +137,7 @@ type Deployment struct {
 	UpdatedReplicas   int32             `json:"updatedReplicas"`
 	AvailableReplicas int32             `json:"availableReplicas"`
 	Strategy          string            `json:"strategy"`
+	Selector          map[string]string `json:"selector"`
 	Labels            map[string]string `json:"labels"`
 	Age               string            `json:"age"`
 	CreatedAt         time.Time         `json:"createdAt"`

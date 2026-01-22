@@ -79,6 +79,7 @@ func convertDeployment(d appsv1.Deployment) models.Deployment {
 		UpdatedReplicas:   updatedReplicas,
 		AvailableReplicas: availableReplicas,
 		Strategy:          strategy,
+		Selector:          d.Spec.Selector.MatchLabels,
 		Labels:            d.Labels,
 		Age:               age,
 		CreatedAt:         d.CreationTimestamp.Time,
