@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { getApiUrl } from '@/lib/api';
 import type { Deployment } from '@/types/k8s';
 
 export function useDeployments(namespace: string = 'all', contextVersion: number = 0) {
@@ -7,27 +8,35 @@ export function useDeployments(namespace: string = 'all', contextVersion: number
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchDeployments = async () => {
       setIsLoading(true);
       setError(null);
       try {
         const url = namespace === 'all' || namespace === ''
-          ? 'http://localhost:8080/api/deployments'
-          : `http://localhost:8080/api/deployments?namespace=${namespace}`;
-        const response = await fetch(url);
+          ? getApiUrl('/api/deployments')
+          : getApiUrl(`/api/deployments?namespace=${namespace}`);
+        const response = await fetch(url, {
+          signal: controller.signal,
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch deployments');
         }
         const data = await response.json();
         setDeployments(data);
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchDeployments();
+    return () => controller.abort();
   }, [namespace, contextVersion]);
 
   return { deployments, isLoading, error };
