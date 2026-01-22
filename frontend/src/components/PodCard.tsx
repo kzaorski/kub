@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ResourceBar } from "@/components/ResourceBar";
 import { cn, getStatusColor, formatBytes, formatMillicores } from "@/lib/utils";
 import type { Pod } from "@/types/k8s";
+import { useMemo } from "react";
 
 interface PodCardProps {
   pod: Pod & { animationClass?: string };
@@ -24,6 +25,33 @@ export function PodCard({ pod }: PodCardProps) {
       return "error";
     return "secondary";
   };
+
+  const getContainerVariant = (
+    state: string
+  ): "default" | "success" | "warning" | "error" | "secondary" => {
+    const s = state.toLowerCase();
+    if (s === "running") return "success";
+    if (s === "completed") return "secondary";
+    if (
+      s.includes("error") ||
+      s.includes("crash") ||
+      s.includes("oom") ||
+      s.includes("failed")
+    )
+      return "error";
+    return "warning";
+  };
+
+  // Container state summary
+  const containerSummary = useMemo(() => {
+    const counts: Record<string, number> = {};
+    pod.containers.forEach((c) => {
+      counts[c.state] = (counts[c.state] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([state, count]) => `${count} ${state}`)
+      .join(", ");
+  }, [pod.containers]);
 
   // Get key labels (first 3, skipping system labels)
   const keyLabels = Object.entries(pod.labels)
@@ -106,17 +134,17 @@ export function PodCard({ pod }: PodCardProps) {
           <div className="mt-3 pt-3 border-t">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
               <Tag className="h-3 w-3" />
-              <span>Containers ({pod.containers.length})</span>
+              <span>Containers: {containerSummary}</span>
             </div>
             <div className="flex flex-wrap gap-1">
               {pod.containers.map((container) => (
                 <Badge
                   key={container.name}
-                  variant={container.ready ? "success" : "warning"}
+                  variant={getContainerVariant(container.state)}
                   className="text-xs"
-                  title={`Image: ${container.image}\nState: ${container.state}`}
+                  title={`Image: ${container.image}`}
                 >
-                  {container.name}
+                  {container.name}: {container.state}
                 </Badge>
               ))}
             </div>
