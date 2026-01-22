@@ -15,7 +15,7 @@ $frontendPath = Join-Path $projectRoot "frontend"
 Start-Process powershell -ArgumentList @(
     "-NoExit"
     "-Command"
-    "Set-Location '$backendPath'; Write-Host 'KUB Backend' -ForegroundColor Cyan; go run ./cmd/kub"
+    "Set-Location '$backendPath'; Write-Host 'KUB Backend' -ForegroundColor Cyan; go run .\cmd\kub"
 ) -WorkingDirectory $backendPath
 
 # Start frontend in new window
