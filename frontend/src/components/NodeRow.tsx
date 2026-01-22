@@ -1,4 +1,5 @@
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Node } from "@/types/k8s";
 
@@ -24,9 +25,21 @@ export function NodeRow({ node, isSelected, onClick }: NodeRowProps) {
       )}
     >
       <TableCell className="w-8">
-        <div className={cn("h-3 w-3 rounded-full", getStatusColor(node.status))} />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn("h-3 w-3 rounded-full", getStatusColor(node.status))} />
+          </TooltipTrigger>
+          <TooltipContent><p>{node.status}</p></TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="font-medium">{node.name}</TableCell>
+      <TableCell className="font-medium">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate block max-w-[200px]">{node.name}</span>
+          </TooltipTrigger>
+          <TooltipContent><p>{node.name}</p></TooltipContent>
+        </Tooltip>
+      </TableCell>
       <TableCell>
         {node.roles.length > 0 ? node.roles.join(", ") : "-"}
       </TableCell>

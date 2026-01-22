@@ -1,10 +1,7 @@
-import { useState, useEffect } from "react";
-import React from "react";
-import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from "@/components/ui/table";
-import { SortableTableHead } from "@/components/ui/sortable-table-head";
-import { PodRow } from "./PodRow";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable } from "@/components/ui/data-table";
 import { PodCard } from "./PodCard";
-import { useTableSort } from "@/hooks/useTableSort";
+import { podColumns } from "./pods/columns";
 import type { Pod } from "@/types/k8s";
 
 interface PodListProps {
@@ -13,33 +10,11 @@ interface PodListProps {
 }
 
 export function PodList({ pods, isLoading }: PodListProps) {
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
-
-  // Clear selection when pods change (e.g., pod deleted)
-  useEffect(() => {
-    if (selectedKey && !pods.find(p => `${p.namespace}/${p.name}` === selectedKey)) {
-      setSelectedKey(null);
-    }
-  }, [pods, selectedKey]);
-
-  const toggle = (pod: Pod) => {
-    const key = `${pod.namespace}/${pod.name}`;
-    setSelectedKey(selectedKey === key ? null : key);
-  };
-
-  const { sortedItems, handleSort, getSortDirection } = useTableSort(pods, {
-    key: 'status',
-    direction: 'asc',
-  });
-
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="h-40 rounded-lg border bg-card animate-pulse"
-          />
+          <Skeleton key={i} className="h-40 rounded-lg" />
         ))}
       </div>
     );
@@ -58,45 +33,12 @@ export function PodList({ pods, isLoading }: PodListProps) {
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-8"></TableHead>
-          <SortableTableHead onSort={() => handleSort('name')} sortDirection={getSortDirection('name')}>
-            Name
-          </SortableTableHead>
-          <SortableTableHead onSort={() => handleSort('namespace')} sortDirection={getSortDirection('namespace')}>
-            Namespace
-          </SortableTableHead>
-          <SortableTableHead onSort={() => handleSort('ready')} sortDirection={getSortDirection('ready')}>
-            Ready
-          </SortableTableHead>
-          <SortableTableHead onSort={() => handleSort('restarts')} sortDirection={getSortDirection('restarts')}>
-            Restarts
-          </SortableTableHead>
-          <SortableTableHead onSort={() => handleSort('age')} sortDirection={getSortDirection('age')}>
-            Age
-          </SortableTableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {sortedItems.map((pod) => {
-          const key = `${pod.namespace}/${pod.name}`;
-          const isSelected = selectedKey === key;
-          return (
-            <React.Fragment key={key}>
-              <PodRow pod={pod} isSelected={isSelected} onClick={() => toggle(pod)} />
-              {isSelected && (
-                <TableRow>
-                  <TableCell colSpan={6} className="p-4 bg-muted/30">
-                    <PodCard pod={pod} />
-                  </TableCell>
-                </TableRow>
-              )}
-            </React.Fragment>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <DataTable
+      columns={podColumns}
+      data={pods}
+      searchKey="name"
+      searchPlaceholder="Filter pods..."
+      renderExpandedRow={(pod) => <PodCard pod={pod} />}
+    />
   );
 }

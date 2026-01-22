@@ -1,4 +1,5 @@
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn, getStatusColor } from "@/lib/utils";
 import type { Pod } from "@/types/k8s";
 
@@ -19,9 +20,21 @@ export function PodRow({ pod, isSelected, onClick }: PodRowProps) {
       )}
     >
       <TableCell className="w-8">
-        <div className={cn("h-3 w-3 rounded-full", getStatusColor(pod.status))} />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn("h-3 w-3 rounded-full", getStatusColor(pod.status))} />
+          </TooltipTrigger>
+          <TooltipContent><p>{pod.status}</p></TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="font-medium">{pod.name}</TableCell>
+      <TableCell className="font-medium">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate block max-w-[200px]">{pod.name}</span>
+          </TooltipTrigger>
+          <TooltipContent><p>{pod.name}</p></TooltipContent>
+        </Tooltip>
+      </TableCell>
       <TableCell className="text-muted-foreground">{pod.namespace}</TableCell>
       <TableCell>{pod.ready}</TableCell>
       <TableCell>{pod.restarts}</TableCell>

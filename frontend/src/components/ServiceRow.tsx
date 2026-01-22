@@ -1,4 +1,5 @@
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Service } from "@/types/k8s";
 
@@ -23,9 +24,21 @@ export function ServiceRow({ service, isSelected, onClick }: ServiceRowProps) {
       )}
     >
       <TableCell className="w-8">
-        <div className="h-3 w-3 rounded-full bg-blue-500" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="h-3 w-3 rounded-full bg-blue-500" />
+          </TooltipTrigger>
+          <TooltipContent><p>Service</p></TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="font-medium">{service.name}</TableCell>
+      <TableCell className="font-medium">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate block max-w-[200px]">{service.name}</span>
+          </TooltipTrigger>
+          <TooltipContent><p>{service.name}</p></TooltipContent>
+        </Tooltip>
+      </TableCell>
       <TableCell className="text-muted-foreground">{service.namespace}</TableCell>
       <TableCell>{service.type}</TableCell>
       <TableCell className="text-muted-foreground">{service.clusterIP || "-"}</TableCell>

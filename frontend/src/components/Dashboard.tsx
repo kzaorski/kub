@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PodList } from "./PodList";
 import { NodeList } from "./NodeList";
@@ -77,9 +78,10 @@ export function Dashboard() {
 
       <main className="container px-4 py-6">
         {error && (
-          <div className="mb-6 p-4 border border-red-200 bg-red-50 rounded-lg text-red-800">
-            {error}
-          </div>
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {/* Cluster Utilization */}

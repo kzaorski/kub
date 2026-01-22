@@ -1,4 +1,5 @@
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { Deployment } from "@/types/k8s";
 
@@ -28,9 +29,26 @@ export function DeploymentRow({ deployment, isSelected, onClick }: DeploymentRow
       )}
     >
       <TableCell className="w-8">
-        <div className={cn("h-3 w-3 rounded-full", getStatusColor())} />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className={cn("h-3 w-3 rounded-full", getStatusColor())} />
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {isReady ? "Ready" : isProgressing ? "Progressing" : "Not Ready"}
+              {deployment.replicas > 0 && ` (${deployment.readyReplicas}/${deployment.replicas})`}
+            </p>
+          </TooltipContent>
+        </Tooltip>
       </TableCell>
-      <TableCell className="font-medium">{deployment.name}</TableCell>
+      <TableCell className="font-medium">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="truncate block max-w-[200px]">{deployment.name}</span>
+          </TooltipTrigger>
+          <TooltipContent><p>{deployment.name}</p></TooltipContent>
+        </Tooltip>
+      </TableCell>
       <TableCell className="text-muted-foreground">{deployment.namespace}</TableCell>
       <TableCell>{deployment.readyReplicas}/{deployment.replicas}</TableCell>
       <TableCell>{deployment.strategy}</TableCell>
