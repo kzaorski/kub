@@ -1,4 +1,4 @@
-import { Clock, Hash } from "lucide-react";
+import { Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -6,9 +6,10 @@ import type { ConfigMap } from "@/types/k8s";
 
 interface ConfigMapCardProps {
   configmap: ConfigMap & { animationClass?: string };
+  onClose?: () => void;
 }
 
-export function ConfigMapCard({ configmap }: ConfigMapCardProps) {
+export function ConfigMapCard({ configmap, onClose }: ConfigMapCardProps) {
   return (
     <Card
       className={cn(
@@ -25,7 +26,18 @@ export function ConfigMapCard({ configmap }: ConfigMapCardProps) {
               <p className="text-xs text-muted-foreground">{configmap.namespace}</p>
             </div>
           </div>
-          <Badge variant="secondary">{configmap.dataCount} {configmap.dataCount === 1 ? 'key' : 'keys'}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">{configmap.dataCount} {configmap.dataCount === 1 ? 'key' : 'keys'}</Badge>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

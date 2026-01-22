@@ -1,4 +1,4 @@
-import { Network, Globe, Clock, Hash } from "lucide-react";
+import { Network, Globe, Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -6,9 +6,10 @@ import type { Service } from "@/types/k8s";
 
 interface ServiceCardProps {
   service: Service & { animationClass?: string };
+  onClose?: () => void;
 }
 
-export function ServiceCard({ service }: ServiceCardProps) {
+export function ServiceCard({ service, onClose }: ServiceCardProps) {
   const getTypeVariant = (): "default" | "success" | "warning" | "error" | "secondary" => {
     const type = service.type.toLowerCase();
     if (type === "clusterip") return "secondary";
@@ -36,7 +37,18 @@ export function ServiceCard({ service }: ServiceCardProps) {
               <p className="text-xs text-muted-foreground">{service.namespace}</p>
             </div>
           </div>
-          <Badge variant={getTypeVariant()}>{service.type}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={getTypeVariant()}>{service.type}</Badge>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

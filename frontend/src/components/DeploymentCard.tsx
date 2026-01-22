@@ -1,4 +1,4 @@
-import { Layers, RefreshCw, Clock, Hash } from "lucide-react";
+import { Layers, RefreshCw, Clock, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -6,9 +6,10 @@ import type { Deployment } from "@/types/k8s";
 
 interface DeploymentCardProps {
   deployment: Deployment & { animationClass?: string };
+  onClose?: () => void;
 }
 
-export function DeploymentCard({ deployment }: DeploymentCardProps) {
+export function DeploymentCard({ deployment, onClose }: DeploymentCardProps) {
   const isReady = deployment.readyReplicas === deployment.replicas && deployment.replicas > 0;
   const isProgressing = deployment.readyReplicas < deployment.replicas && deployment.readyReplicas > 0;
 
@@ -50,7 +51,18 @@ export function DeploymentCard({ deployment }: DeploymentCardProps) {
               <p className="text-xs text-muted-foreground">{deployment.namespace}</p>
             </div>
           </div>
-          <Badge variant={getStatusVariant()}>{getStatusText()}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={getStatusVariant()}>{getStatusText()}</Badge>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

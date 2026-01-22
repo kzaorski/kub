@@ -42,7 +42,7 @@ export function NodeList({ nodes, isLoading }: NodeListProps) {
       data={nodes}
       searchKey="name"
       searchPlaceholder="Filter nodes..."
-      renderExpandedRow={(node) => <NodeCard node={node} />}
+      renderExpandedRow={(node, onClose) => <NodeCard node={node} onClose={onClose} />}
     />
   );
 }

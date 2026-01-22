@@ -38,7 +38,7 @@ export function DeploymentList({ deployments, isLoading }: DeploymentListProps) 
       data={deployments}
       searchKey="name"
       searchPlaceholder="Filter deployments..."
-      renderExpandedRow={(deployment) => <DeploymentCard deployment={deployment} />}
+      renderExpandedRow={(deployment, onClose) => <DeploymentCard deployment={deployment} onClose={onClose} />}
     />
   );
 }

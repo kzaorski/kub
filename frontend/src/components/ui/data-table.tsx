@@ -25,7 +25,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[]
   searchPlaceholder?: string
   searchKey?: string
-  renderExpandedRow?: (row: TData) => React.ReactNode
+  renderExpandedRow?: (row: TData, onClose: () => void) => React.ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -117,9 +117,9 @@ export function DataTable<TData, TValue>({
                       ))}
                     </TableRow>
                     {renderExpandedRow && isExpanded && (
-                      <TableRow>
+                      <TableRow onClick={(e) => e.stopPropagation()}>
                         <TableCell colSpan={columns.length} className="p-4 bg-muted/30">
-                          {renderExpandedRow(row.original)}
+                          {renderExpandedRow(row.original, () => toggleRowExpansion(row.id))}
                         </TableCell>
                       </TableRow>
                     )}

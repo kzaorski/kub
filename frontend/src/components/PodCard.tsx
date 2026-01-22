@@ -1,4 +1,4 @@
-import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash } from "lucide-react";
+import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResourceBar } from "@/components/ResourceBar";
@@ -8,15 +8,22 @@ import { useMemo } from "react";
 
 interface PodCardProps {
   pod: Pod & { animationClass?: string };
+  onClose?: () => void;
 }
 
-export function PodCard({ pod }: PodCardProps) {
+export function PodCard({ pod, onClose }: PodCardProps) {
   const getStatusVariant = (
     status: string
   ): "default" | "success" | "warning" | "error" | "secondary" => {
     const normalizedStatus = status.toLowerCase();
     if (normalizedStatus === "running") return "success";
     if (normalizedStatus === "pending") return "warning";
+    // Image pull errors are warnings (waiting state)
+    if (
+      normalizedStatus.includes("imagepull") ||
+      normalizedStatus.includes("registry")
+    )
+      return "warning";
     if (
       normalizedStatus === "failed" ||
       normalizedStatus === "error" ||
@@ -45,7 +52,7 @@ export function PodCard({ pod }: PodCardProps) {
   // Container state summary
   const containerSummary = useMemo(() => {
     const counts: Record<string, number> = {};
-    pod.containers.forEach((c) => {
+    (pod.containers || []).forEach((c) => {
       counts[c.state] = (counts[c.state] || 0) + 1;
     });
     return Object.entries(counts)
@@ -54,7 +61,7 @@ export function PodCard({ pod }: PodCardProps) {
   }, [pod.containers]);
 
   // Get key labels (first 3, skipping system labels)
-  const keyLabels = Object.entries(pod.labels)
+  const keyLabels = Object.entries(pod.labels || {})
     .filter(([key]) => !key.startsWith('pod-template-hash'))
     .slice(0, 3);
 
@@ -79,7 +86,18 @@ export function PodCard({ pod }: PodCardProps) {
               <p className="text-xs text-muted-foreground">{pod.namespace}</p>
             </div>
           </div>
-          <Badge variant={getStatusVariant(pod.status)}>{pod.status}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={getStatusVariant(pod.status)}>{pod.status}</Badge>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -130,7 +148,7 @@ export function PodCard({ pod }: PodCardProps) {
         </div>
 
         {/* Containers */}
-        {pod.containers.length > 0 && (
+        {pod.containers && pod.containers.length > 0 && (
           <div className="mt-3 pt-3 border-t">
             <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
               <Tag className="h-3 w-3" />

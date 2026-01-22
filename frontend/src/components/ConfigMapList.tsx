@@ -38,7 +38,7 @@ export function ConfigMapList({ configmaps, isLoading }: ConfigMapListProps) {
       data={configmaps}
       searchKey="name"
       searchPlaceholder="Filter configmaps..."
-      renderExpandedRow={(configmap) => <ConfigMapCard configmap={configmap} />}
+      renderExpandedRow={(configmap, onClose) => <ConfigMapCard configmap={configmap} onClose={onClose} />}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle } from "lucide-react";
+import { Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatBytes, formatMillicores } from "@/lib/utils";
@@ -6,9 +6,10 @@ import type { Node } from "@/types/k8s";
 
 interface NodeCardProps {
   node: Node;
+  onClose?: () => void;
 }
 
-export function NodeCard({ node }: NodeCardProps) {
+export function NodeCard({ node, onClose }: NodeCardProps) {
   const getStatusVariant = (
     status: string
   ): "default" | "success" | "warning" | "error" | "secondary" => {
@@ -45,7 +46,18 @@ export function NodeCard({ node }: NodeCardProps) {
               </div>
             </div>
           </div>
-          <Badge variant={getStatusVariant(node.status)}>{node.status}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={getStatusVariant(node.status)}>{node.status}</Badge>
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="Close"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-3 text-sm">

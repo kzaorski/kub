@@ -38,7 +38,7 @@ export function ServiceList({ services, isLoading }: ServiceListProps) {
       data={services}
       searchKey="name"
       searchPlaceholder="Filter services..."
-      renderExpandedRow={(service) => <ServiceCard service={service} />}
+      renderExpandedRow={(service, onClose) => <ServiceCard service={service} onClose={onClose} />}
     />
   );
 }

@@ -38,7 +38,7 @@ export function PodList({ pods, isLoading }: PodListProps) {
       data={pods}
       searchKey="name"
       searchPlaceholder="Filter pods..."
-      renderExpandedRow={(pod) => <PodCard pod={pod} />}
+      renderExpandedRow={(pod, onClose) => <PodCard pod={pod} onClose={onClose} />}
     />
   );
 }
