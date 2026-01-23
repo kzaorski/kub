@@ -1,7 +1,8 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable } from "@/components/ui/data-table";
 import { PodCard } from "./PodCard";
+import { LogViewer } from "./LogViewer";
 import { podColumns } from "./pods/columns";
 import type { Pod } from "@/types/k8s";
 
@@ -11,6 +12,15 @@ interface PodListProps {
 }
 
 export const PodList = memo(function PodList({ pods, isLoading }: PodListProps) {
+  const [logViewerPod, setLogViewerPod] = useState<Pod | null>(null);
+
+  const handleViewLogs = (pod: Pod) => {
+    setLogViewerPod(pod);
+  };
+
+  const handleCloseLogViewer = () => {
+    setLogViewerPod(null);
+  };
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -34,12 +44,23 @@ export const PodList = memo(function PodList({ pods, isLoading }: PodListProps) 
   }
 
   return (
-    <DataTable
-      columns={podColumns}
-      data={pods}
-      searchKey="name"
-      searchPlaceholder="Filter pods..."
-      renderExpandedRow={(pod, onClose) => <PodCard pod={pod} onClose={onClose} />}
-    />
+    <>
+      <DataTable
+        columns={podColumns}
+        data={pods}
+        searchKey="name"
+        searchPlaceholder="Filter pods..."
+        renderExpandedRow={(pod, onClose) => (
+          <PodCard pod={pod} onClose={onClose} onViewLogs={handleViewLogs} />
+        )}
+      />
+      {logViewerPod && (
+        <LogViewer
+          pod={logViewerPod}
+          open={!!logViewerPod}
+          onClose={handleCloseLogViewer}
+        />
+      )}
+    </>
   );
 });

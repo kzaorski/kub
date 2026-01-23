@@ -31,6 +31,7 @@ func main() {
 	// Create handlers
 	handler := api.NewHandler(k8sClient)
 	hub := api.NewHub(k8sClient)
+	logStreamHub := api.NewLogStreamHub(k8sClient)
 
 	// Create router
 	r := chi.NewRouter()
@@ -62,6 +63,9 @@ func main() {
 		r.Get("/namespaces", handler.GetNamespaces)
 		r.Get("/pods", handler.GetPods)
 		r.Get("/pods/{namespace}/{name}", handler.GetPod)
+		r.Get("/pods/{namespace}/{name}/containers", handler.GetContainers)
+		r.Get("/pods/{namespace}/{name}/logs", handler.GetPodLogs)
+		r.Get("/pods/{namespace}/{name}/logs/download", handler.DownloadPodLogs)
 		r.Get("/nodes", handler.GetNodes)
 		r.Get("/metrics/nodes", handler.GetNodeMetrics)
 		r.Get("/metrics/pods", handler.GetPodMetrics)
@@ -78,6 +82,7 @@ func main() {
 
 	// WebSocket
 	r.Get("/ws", hub.HandleWebSocket)
+	r.Get("/ws/logs", logStreamHub.HandleLogStream)
 
 	// Static files (embedded frontend)
 	staticFS, err := fs.Sub(staticFiles, "static")

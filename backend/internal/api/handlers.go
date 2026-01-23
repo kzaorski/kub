@@ -2,9 +2,11 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/krzyzao/kub/internal/k8s"
@@ -326,4 +328,133 @@ func (h *Handler) GetConfigMap(w http.ResponseWriter, r *http.Request) {
 func respondJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+// GetPodLogs handles log retrieval
+func (h *Handler) GetPodLogs(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Parse query parameters
+	query := r.URL.Query()
+
+	var tailLines int64
+	if tl := query.Get("tailLines"); tl != "" {
+		if tl == "all" {
+			tailLines = 0 // Get all logs
+		} else {
+			_, err := fmt.Sscanf(tl, "%d", &tailLines)
+			if err != nil {
+				http.Error(w, "invalid tailLines parameter", http.StatusBadRequest)
+				return
+			}
+		}
+	} else {
+		tailLines = 100 // Default
+	}
+
+	container := query.Get("container")
+	previous := query.Get("previous") == "true"
+	timestamps := query.Get("timestamps") == "true"
+
+	logOpts := k8s.LogOptions{
+		Container:  container,
+		TailLines:  tailLines,
+		Previous:   previous,
+		Timestamps: timestamps,
+	}
+
+	logs, err := h.k8sClient.GetPodLogs(r.Context(), namespace, name, logOpts)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch logs")
+		return
+	}
+
+	response := map[string]interface{}{
+		"logs":      string(logs),
+		"container": container,
+		"pod":       name,
+		"namespace": namespace,
+	}
+
+	respondJSON(w, response)
+}
+
+// GetContainers returns container names for a pod
+func (h *Handler) GetContainers(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
+	containers, err := h.k8sClient.GetContainerNames(r.Context(), namespace, name)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch containers")
+		return
+	}
+
+	respondJSON(w, map[string][]string{"containers": containers})
+}
+
+// DownloadPodLogs handles log file download
+func (h *Handler) DownloadPodLogs(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Parse query parameters
+	query := r.URL.Query()
+
+	var tailLines int64
+	if tl := query.Get("tailLines"); tl != "" {
+		if tl == "all" {
+			tailLines = 0
+		} else {
+			_, err := fmt.Sscanf(tl, "%d", &tailLines)
+			if err != nil {
+				http.Error(w, "invalid tailLines parameter", http.StatusBadRequest)
+				return
+			}
+		}
+	} else {
+		tailLines = 1000 // Default for downloads
+	}
+
+	container := query.Get("container")
+	previous := query.Get("previous") == "true"
+	timestamps := query.Get("timestamps") == "true"
+
+	logOpts := k8s.LogOptions{
+		Container:  container,
+		TailLines:  tailLines,
+		Previous:   previous,
+		Timestamps: timestamps,
+	}
+
+	logs, err := h.k8sClient.GetPodLogs(r.Context(), namespace, name, logOpts)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch logs")
+		return
+	}
+
+	// Set headers for download
+	timestamp := time.Now().Format("20060102-150405")
+	filename := fmt.Sprintf("%s-%s-%s.log", name, container, timestamp)
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	w.Write(logs)
 }

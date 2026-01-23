@@ -174,3 +174,19 @@ type ConfigMap struct {
 	Age       string            `json:"age"`
 	CreatedAt time.Time         `json:"createdAt"`
 }
+
+// LogOptions represents options for fetching logs
+type LogOptions struct {
+	Container  string `json:"container"`
+	TailLines  int64  `json:"tailLines"`
+	Previous   bool   `json:"previous"`
+	Timestamps bool   `json:"timestamps"`
+}
+
+// LogResponse represents the log response
+type LogResponse struct {
+	Logs      string `json:"logs"`
+	Container string `json:"container"`
+	Pod       string `json:"pod"`
+	Namespace string `json:"namespace"`
+}

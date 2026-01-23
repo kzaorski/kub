@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X } from "lucide-react";
+import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResourceBar } from "@/components/ResourceBar";
@@ -9,9 +9,10 @@ import type { Pod } from "@/types/k8s";
 interface PodCardProps {
   pod: Pod & { animationClass?: string };
   onClose?: () => void;
+  onViewLogs?: (pod: Pod) => void;
 }
 
-export const PodCard = memo(function PodCard({ pod, onClose }: PodCardProps) {
+export const PodCard = memo(function PodCard({ pod, onClose, onViewLogs }: PodCardProps) {
   // Container state summary
   const containerSummary = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -51,6 +52,15 @@ export const PodCard = memo(function PodCard({ pod, onClose }: PodCardProps) {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={getPodStatusVariant(pod.status)}>{pod.status}</Badge>
+            {onViewLogs && (
+              <button
+                onClick={() => onViewLogs(pod)}
+                className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+                title="View Logs"
+              >
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
             {onClose && (
               <button
                 onClick={onClose}

@@ -163,3 +163,15 @@ export interface ConfigMap {
   createdAt: string;
   animationClass?: string;
 }
+
+export interface LogOptions {
+  container: string;
+  tailLines?: number;
+  previous?: boolean;
+  timestamps?: boolean;
+}
+
+export interface LogStreamMessage {
+  type: 'log' | 'error' | 'end';
+  data: string;
+}
