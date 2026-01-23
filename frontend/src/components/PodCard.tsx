@@ -1,8 +1,10 @@
-import { memo, useMemo } from "react";
-import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X, FileText } from "lucide-react";
+import { memo, useMemo, useState } from "react";
+import { Box, RefreshCw, Clock, Server, Tag, Globe, Cpu, MemoryStick, Hash, X, FileText, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ResourceBar } from "@/components/ResourceBar";
+import { EventsPopover } from "@/components/EventsPopover";
+import { DescribeModal } from "@/components/DescribeModal";
 import { cn, getStatusColor, formatBytes, formatMillicores, getPodStatusVariant, getContainerStatusVariant } from "@/lib/utils";
 import type { Pod } from "@/types/k8s";
 
@@ -13,6 +15,8 @@ interface PodCardProps {
 }
 
 export const PodCard = memo(function PodCard({ pod, onClose, onViewLogs }: PodCardProps) {
+  const [showDescribe, setShowDescribe] = useState(false);
+
   // Container state summary
   const containerSummary = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -30,6 +34,14 @@ export const PodCard = memo(function PodCard({ pod, onClose, onViewLogs }: PodCa
     .slice(0, 3);
 
   return (
+    <>
+    <DescribeModal
+      isOpen={showDescribe}
+      onClose={() => setShowDescribe(false)}
+      resourceType="Pod"
+      resource={pod}
+      namespace={pod.namespace}
+    />
     <Card
       className={cn(
         "transition-all duration-300 hover:shadow-md",
@@ -52,6 +64,19 @@ export const PodCard = memo(function PodCard({ pod, onClose, onViewLogs }: PodCa
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={getPodStatusVariant(pod.status)}>{pod.status}</Badge>
+            <button
+              onClick={() => setShowDescribe(true)}
+              className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+              title="Describe"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <EventsPopover
+              resourceType="Pod"
+              resourceName={pod.name}
+              namespace={pod.namespace}
+              onViewAll={() => setShowDescribe(true)}
+            />
             {onViewLogs && (
               <button
                 onClick={() => onViewLogs(pod)}
@@ -160,5 +185,6 @@ export const PodCard = memo(function PodCard({ pod, onClose, onViewLogs }: PodCa
         )}
       </CardContent>
     </Card>
+    </>
   );
 });

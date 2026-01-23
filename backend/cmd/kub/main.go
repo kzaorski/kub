@@ -76,8 +76,10 @@ func main() {
 		r.Get("/deployments/{namespace}/{name}", handler.GetDeployment)
 		r.Get("/services", handler.GetServices)
 		r.Get("/services/{namespace}/{name}", handler.GetService)
+		r.Get("/services/{namespace}/{name}/endpoints", handler.GetServiceEndpoints)
 		r.Get("/configmaps", handler.GetConfigMaps)
 		r.Get("/configmaps/{namespace}/{name}", handler.GetConfigMap)
+		r.Get("/events/{namespace}/{kind}/{name}", handler.GetResourceEvents)
 	})
 
 	// WebSocket

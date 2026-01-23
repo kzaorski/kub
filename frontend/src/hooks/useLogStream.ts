@@ -145,7 +145,7 @@ export function useLogStream(pod: Pod): UseLogStreamResult {
       }
     };
 
-    ws.onerror = (event) => {
+    ws.onerror = () => {
       if (!mountedRef.current) return;
       setError('WebSocket connection error');
     };

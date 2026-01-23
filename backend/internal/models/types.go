@@ -14,6 +14,7 @@ type Pod struct {
 	IP                string            `json:"ip"`
 	Node              string            `json:"node"`
 	Labels            map[string]string `json:"labels"`
+	Annotations       map[string]string `json:"annotations,omitempty"`
 	CreatedAt         time.Time         `json:"createdAt"`
 	Containers        []Container       `json:"containers"`
 	CPUUsage          int64             `json:"cpuUsage"`          // millicores
@@ -22,15 +23,102 @@ type Pod struct {
 	CPULimit          int64             `json:"cpuLimit"`          // millicores
 	MemoryRequest     int64             `json:"memoryRequest"`     // bytes
 	MemoryLimit       int64             `json:"memoryLimit"`       // bytes
+	// Extended fields for describe
+	Conditions      []PodCondition   `json:"conditions,omitempty"`
+	Volumes         []Volume         `json:"volumes,omitempty"`
+	OwnerReferences []OwnerReference `json:"ownerReferences,omitempty"`
+	Tolerations     []Toleration     `json:"tolerations,omitempty"`
+	NodeSelector    map[string]string `json:"nodeSelector,omitempty"`
+	ServiceAccount  string            `json:"serviceAccount,omitempty"`
+	QOSClass        string            `json:"qosClass,omitempty"`
+	PriorityClass   string            `json:"priorityClass,omitempty"`
+}
+
+// PodCondition represents a condition of a pod
+type PodCondition struct {
+	Type               string    `json:"type"`
+	Status             string    `json:"status"`
+	LastTransitionTime time.Time `json:"lastTransitionTime"`
+	Reason             string    `json:"reason,omitempty"`
+	Message            string    `json:"message,omitempty"`
+}
+
+// Volume represents a pod volume
+type Volume struct {
+	Name   string `json:"name"`
+	Type   string `json:"type"`
+	Source string `json:"source"`
+}
+
+// OwnerReference represents a reference to an owner object
+type OwnerReference struct {
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+	UID  string `json:"uid"`
+}
+
+// Toleration represents a pod toleration
+type Toleration struct {
+	Key      string `json:"key,omitempty"`
+	Operator string `json:"operator,omitempty"`
+	Value    string `json:"value,omitempty"`
+	Effect   string `json:"effect,omitempty"`
 }
 
 // Container represents a container within a pod
 type Container struct {
-	Name         string `json:"name"`
-	Image        string `json:"image"`
-	Ready        bool   `json:"ready"`
-	RestartCount int32  `json:"restartCount"`
-	State        string `json:"state"`
+	Name            string          `json:"name"`
+	Image           string          `json:"image"`
+	Ready           bool            `json:"ready"`
+	RestartCount    int32           `json:"restartCount"`
+	State           string          `json:"state"`
+	StateDetails    string          `json:"stateDetails,omitempty"`
+	StartedAt       *time.Time      `json:"startedAt,omitempty"`
+	VolumeMounts    []VolumeMount   `json:"volumeMounts,omitempty"`
+	Env             []EnvVar        `json:"env,omitempty"`
+	Ports           []ContainerPort `json:"ports,omitempty"`
+	Resources       ResourceRequirements `json:"resources,omitempty"`
+	SecurityContext *SecurityContext     `json:"securityContext,omitempty"`
+	Command         []string        `json:"command,omitempty"`
+	Args            []string        `json:"args,omitempty"`
+}
+
+// VolumeMount represents a volume mount in a container
+type VolumeMount struct {
+	Name      string `json:"name"`
+	MountPath string `json:"mountPath"`
+	ReadOnly  bool   `json:"readOnly"`
+	SubPath   string `json:"subPath,omitempty"`
+}
+
+// EnvVar represents an environment variable
+type EnvVar struct {
+	Name      string `json:"name"`
+	Value     string `json:"value,omitempty"`
+	ValueFrom string `json:"valueFrom,omitempty"`
+}
+
+// ContainerPort represents a container port
+type ContainerPort struct {
+	Name          string `json:"name,omitempty"`
+	ContainerPort int32  `json:"containerPort"`
+	Protocol      string `json:"protocol"`
+}
+
+// ResourceRequirements represents container resource requirements
+type ResourceRequirements struct {
+	RequestsCPU    string `json:"requestsCpu,omitempty"`
+	RequestsMemory string `json:"requestsMemory,omitempty"`
+	LimitsCPU      string `json:"limitsCpu,omitempty"`
+	LimitsMemory   string `json:"limitsMemory,omitempty"`
+}
+
+// SecurityContext represents container security context
+type SecurityContext struct {
+	RunAsUser    *int64 `json:"runAsUser,omitempty"`
+	RunAsNonRoot *bool  `json:"runAsNonRoot,omitempty"`
+	ReadOnlyFS   *bool  `json:"readOnlyRootFilesystem,omitempty"`
+	Privileged   *bool  `json:"privileged,omitempty"`
 }
 
 // Namespace represents a Kubernetes namespace
@@ -63,6 +151,26 @@ type Node struct {
 	Age                string            `json:"age"`
 	CreatedAt          time.Time         `json:"createdAt"`
 	Conditions         []NodeCondition   `json:"conditions"`
+	// Extended fields for describe
+	Labels             map[string]string `json:"labels,omitempty"`
+	Annotations        map[string]string `json:"annotations,omitempty"`
+	Taints             []Taint           `json:"taints,omitempty"`
+	Addresses          []NodeAddress     `json:"addresses,omitempty"`
+	Images             []string          `json:"images,omitempty"`
+	PodCIDR            string            `json:"podCIDR,omitempty"`
+}
+
+// Taint represents a node taint
+type Taint struct {
+	Key    string `json:"key"`
+	Value  string `json:"value,omitempty"`
+	Effect string `json:"effect"`
+}
+
+// NodeAddress represents a node address
+type NodeAddress struct {
+	Type    string `json:"type"`
+	Address string `json:"address"`
 }
 
 // NodeCondition represents a node condition
@@ -141,19 +249,41 @@ type Deployment struct {
 	Labels            map[string]string `json:"labels"`
 	Age               string            `json:"age"`
 	CreatedAt         time.Time         `json:"createdAt"`
+	// Extended fields for describe
+	Annotations       map[string]string      `json:"annotations,omitempty"`
+	Conditions        []DeploymentCondition  `json:"conditions,omitempty"`
+	MaxSurge          string                 `json:"maxSurge,omitempty"`
+	MaxUnavailable    string                 `json:"maxUnavailable,omitempty"`
+	PodTemplateImage  string                 `json:"podTemplateImage,omitempty"`
+	RevisionHistory   int32                  `json:"revisionHistoryLimit,omitempty"`
+}
+
+// DeploymentCondition represents a deployment condition
+type DeploymentCondition struct {
+	Type               string    `json:"type"`
+	Status             string    `json:"status"`
+	LastTransitionTime time.Time `json:"lastTransitionTime"`
+	Reason             string    `json:"reason,omitempty"`
+	Message            string    `json:"message,omitempty"`
 }
 
 // Service represents a Kubernetes service
 type Service struct {
-	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace"`
-	Type        string            `json:"type"`
-	ClusterIP   string            `json:"clusterIP"`
-	ExternalIP  string            `json:"externalIP"`
-	Ports       []ServicePort     `json:"ports"`
-	Selector    map[string]string `json:"selector"`
-	Age         string            `json:"age"`
-	CreatedAt   time.Time         `json:"createdAt"`
+	Name            string            `json:"name"`
+	Namespace       string            `json:"namespace"`
+	Type            string            `json:"type"`
+	ClusterIP       string            `json:"clusterIP"`
+	ExternalIP      string            `json:"externalIP"`
+	Ports           []ServicePort     `json:"ports"`
+	Selector        map[string]string `json:"selector"`
+	Age             string            `json:"age"`
+	CreatedAt       time.Time         `json:"createdAt"`
+	// Extended fields for describe
+	Labels          map[string]string `json:"labels,omitempty"`
+	Annotations     map[string]string `json:"annotations,omitempty"`
+	SessionAffinity string            `json:"sessionAffinity,omitempty"`
+	ExternalName    string            `json:"externalName,omitempty"`
+	LoadBalancerIP  string            `json:"loadBalancerIP,omitempty"`
 }
 
 // ServicePort represents a service port
@@ -167,12 +297,17 @@ type ServicePort struct {
 
 // ConfigMap represents a Kubernetes configmap
 type ConfigMap struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	DataCount int               `json:"dataCount"`
-	Keys      []string          `json:"keys"`
-	Age       string            `json:"age"`
-	CreatedAt time.Time         `json:"createdAt"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	DataCount   int               `json:"dataCount"`
+	Keys        []string          `json:"keys"`
+	Age         string            `json:"age"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	// Extended fields for describe
+	Data        map[string]string `json:"data,omitempty"`
+	BinaryData  map[string]string `json:"binaryData,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // LogOptions represents options for fetching logs
@@ -189,4 +324,38 @@ type LogResponse struct {
 	Container string `json:"container"`
 	Pod       string `json:"pod"`
 	Namespace string `json:"namespace"`
+}
+
+// Event represents a Kubernetes event
+type Event struct {
+	Type      string    `json:"type"`      // Normal, Warning
+	Reason    string    `json:"reason"`    // Scheduled, Pulling, Started, etc.
+	Message   string    `json:"message"`
+	Count     int32     `json:"count"`
+	FirstSeen time.Time `json:"firstSeen"`
+	LastSeen  time.Time `json:"lastSeen"`
+	Source    string    `json:"source"`    // kubelet, scheduler, etc.
+	Object    string    `json:"object"`    // Pod/nginx-abc123, etc.
+}
+
+// Endpoint represents a Kubernetes endpoint for a service
+type Endpoint struct {
+	Addresses []EndpointAddress `json:"addresses"`
+	Ports     []EndpointPort    `json:"ports"`
+	NotReady  []EndpointAddress `json:"notReadyAddresses,omitempty"`
+}
+
+// EndpointAddress represents an endpoint address
+type EndpointAddress struct {
+	IP        string `json:"ip"`
+	Hostname  string `json:"hostname,omitempty"`
+	NodeName  string `json:"nodeName,omitempty"`
+	TargetRef string `json:"targetRef,omitempty"` // Pod/nginx-abc123
+}
+
+// EndpointPort represents an endpoint port
+type EndpointPort struct {
+	Name     string `json:"name,omitempty"`
+	Port     int32  `json:"port"`
+	Protocol string `json:"protocol"`
 }

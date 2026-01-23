@@ -68,6 +68,41 @@ func convertDeployment(d appsv1.Deployment) models.Deployment {
 		strategy = "RollingUpdate"
 	}
 
+	// Get rolling update params
+	var maxSurge, maxUnavailable string
+	if d.Spec.Strategy.RollingUpdate != nil {
+		if d.Spec.Strategy.RollingUpdate.MaxSurge != nil {
+			maxSurge = d.Spec.Strategy.RollingUpdate.MaxSurge.String()
+		}
+		if d.Spec.Strategy.RollingUpdate.MaxUnavailable != nil {
+			maxUnavailable = d.Spec.Strategy.RollingUpdate.MaxUnavailable.String()
+		}
+	}
+
+	// Get pod template image
+	var podTemplateImage string
+	if len(d.Spec.Template.Spec.Containers) > 0 {
+		podTemplateImage = d.Spec.Template.Spec.Containers[0].Image
+	}
+
+	// Get revision history limit
+	var revisionHistory int32
+	if d.Spec.RevisionHistoryLimit != nil {
+		revisionHistory = *d.Spec.RevisionHistoryLimit
+	}
+
+	// Convert conditions
+	conditions := make([]models.DeploymentCondition, 0, len(d.Status.Conditions))
+	for _, cond := range d.Status.Conditions {
+		conditions = append(conditions, models.DeploymentCondition{
+			Type:               string(cond.Type),
+			Status:             string(cond.Status),
+			LastTransitionTime: cond.LastTransitionTime.Time,
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+		})
+	}
+
 	// Calculate age
 	age := formatDuration(time.Since(d.CreationTimestamp.Time))
 
@@ -83,5 +118,11 @@ func convertDeployment(d appsv1.Deployment) models.Deployment {
 		Labels:            d.Labels,
 		Age:               age,
 		CreatedAt:         d.CreationTimestamp.Time,
+		Annotations:       d.Annotations,
+		Conditions:        conditions,
+		MaxSurge:          maxSurge,
+		MaxUnavailable:    maxUnavailable,
+		PodTemplateImage:  podTemplateImage,
+		RevisionHistory:   revisionHistory,
 	}
 }

@@ -1,7 +1,9 @@
-import { memo } from "react";
-import { Network, Globe, Clock, Hash, X } from "lucide-react";
+import { memo, useState } from "react";
+import { Network, Globe, Clock, Hash, X, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EventsPopover } from "@/components/EventsPopover";
+import { DescribeModal } from "@/components/DescribeModal";
 import { cn } from "@/lib/utils";
 import type { Service } from "@/types/k8s";
 
@@ -11,6 +13,7 @@ interface ServiceCardProps {
 }
 
 export const ServiceCard = memo(function ServiceCard({ service, onClose }: ServiceCardProps) {
+  const [showDescribe, setShowDescribe] = useState(false);
   const getTypeVariant = (): "default" | "success" | "warning" | "error" | "secondary" => {
     const type = service.type.toLowerCase();
     if (type === "clusterip") return "secondary";
@@ -23,6 +26,14 @@ export const ServiceCard = memo(function ServiceCard({ service, onClose }: Servi
   const selectorEntries = Object.entries(service.selector || {}).slice(0, 3);
 
   return (
+    <>
+    <DescribeModal
+      isOpen={showDescribe}
+      onClose={() => setShowDescribe(false)}
+      resourceType="Service"
+      resource={service}
+      namespace={service.namespace}
+    />
     <Card
       className={cn(
         "transition-all duration-300 hover:shadow-md",
@@ -40,6 +51,19 @@ export const ServiceCard = memo(function ServiceCard({ service, onClose }: Servi
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={getTypeVariant()}>{service.type}</Badge>
+            <button
+              onClick={() => setShowDescribe(true)}
+              className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+              title="Describe"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <EventsPopover
+              resourceType="Service"
+              resourceName={service.name}
+              namespace={service.namespace}
+              onViewAll={() => setShowDescribe(true)}
+            />
             {onClose && (
               <button
                 onClick={onClose}
@@ -116,5 +140,6 @@ export const ServiceCard = memo(function ServiceCard({ service, onClose }: Servi
         )}
       </CardContent>
     </Card>
+    </>
   );
 });

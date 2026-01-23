@@ -81,6 +81,44 @@ func convertNode(n corev1.Node) models.Node {
 		})
 	}
 
+	// Convert addresses
+	addresses := make([]models.NodeAddress, 0, len(n.Status.Addresses))
+	for _, addr := range n.Status.Addresses {
+		addresses = append(addresses, models.NodeAddress{
+			Type:    string(addr.Type),
+			Address: addr.Address,
+		})
+	}
+
+	// Convert taints
+	taints := make([]models.Taint, 0, len(n.Spec.Taints))
+	for _, t := range n.Spec.Taints {
+		taints = append(taints, models.Taint{
+			Key:    t.Key,
+			Value:  t.Value,
+			Effect: string(t.Effect),
+		})
+	}
+
+	// Get first 10 container images for brevity
+	images := make([]string, 0)
+	for _, img := range n.Status.Images {
+		if len(img.Names) > 0 {
+			// Prefer the name without sha256 digest
+			imageName := img.Names[len(img.Names)-1]
+			for _, name := range img.Names {
+				if !strings.Contains(name, "@sha256:") {
+					imageName = name
+					break
+				}
+			}
+			images = append(images, imageName)
+		}
+		if len(images) >= 10 {
+			break
+		}
+	}
+
 	// Calculate age
 	age := formatDuration(time.Since(n.CreationTimestamp.Time))
 
@@ -102,5 +140,11 @@ func convertNode(n corev1.Node) models.Node {
 		Age:               age,
 		CreatedAt:         n.CreationTimestamp.Time,
 		Conditions:        conditions,
+		Labels:            n.Labels,
+		Annotations:       n.Annotations,
+		Taints:            taints,
+		Addresses:         addresses,
+		Images:            images,
+		PodCIDR:           n.Spec.PodCIDR,
 	}
 }

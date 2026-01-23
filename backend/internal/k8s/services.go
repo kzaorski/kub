@@ -86,18 +86,32 @@ func convertService(s corev1.Service) models.Service {
 		ports = append(ports, port)
 	}
 
+	// Get session affinity
+	sessionAffinity := string(s.Spec.SessionAffinity)
+
+	// Get external name (for ExternalName services)
+	externalName := s.Spec.ExternalName
+
+	// Get load balancer IP
+	loadBalancerIP := s.Spec.LoadBalancerIP
+
 	// Calculate age
 	age := formatDuration(time.Since(s.CreationTimestamp.Time))
 
 	return models.Service{
-		Name:      s.Name,
-		Namespace: s.Namespace,
-		Type:      serviceType,
-		ClusterIP: clusterIP,
-		ExternalIP: externalIP,
-		Ports:     ports,
-		Selector:  s.Spec.Selector,
-		Age:       age,
-		CreatedAt: s.CreationTimestamp.Time,
+		Name:            s.Name,
+		Namespace:       s.Namespace,
+		Type:            serviceType,
+		ClusterIP:       clusterIP,
+		ExternalIP:      externalIP,
+		Ports:           ports,
+		Selector:        s.Spec.Selector,
+		Age:             age,
+		CreatedAt:       s.CreationTimestamp.Time,
+		Labels:          s.Labels,
+		Annotations:     s.Annotations,
+		SessionAffinity: sessionAffinity,
+		ExternalName:    externalName,
+		LoadBalancerIP:  loadBalancerIP,
 	}
 }

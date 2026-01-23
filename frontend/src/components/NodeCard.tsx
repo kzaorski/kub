@@ -1,7 +1,9 @@
-import { memo } from "react";
-import { Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle, X } from "lucide-react";
+import { memo, useState } from "react";
+import { Cpu, MemoryStick, Globe, Clock, Package, AlertTriangle, X, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EventsPopover } from "@/components/EventsPopover";
+import { DescribeModal } from "@/components/DescribeModal";
 import { cn, formatBytes, formatMillicores, getNodeStatusVariant, getNodeStatusColor } from "@/lib/utils";
 import type { Node } from "@/types/k8s";
 
@@ -11,12 +13,20 @@ interface NodeCardProps {
 }
 
 export const NodeCard = memo(function NodeCard({ node, onClose }: NodeCardProps) {
+  const [showDescribe, setShowDescribe] = useState(false);
   // Show key node conditions (not Ready, as that's shown in status badge)
   const keyConditions = node.conditions?.filter(
     c => ["MemoryPressure", "DiskPressure", "PIDPressure"].includes(c.type)
   ) || [];
 
   return (
+    <>
+    <DescribeModal
+      isOpen={showDescribe}
+      onClose={() => setShowDescribe(false)}
+      resourceType="Node"
+      resource={node}
+    />
     <Card className="transition-all duration-300 hover:shadow-md">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
@@ -35,6 +45,19 @@ export const NodeCard = memo(function NodeCard({ node, onClose }: NodeCardProps)
           </div>
           <div className="flex items-center gap-2">
             <Badge variant={getNodeStatusVariant(node.status)}>{node.status}</Badge>
+            <button
+              onClick={() => setShowDescribe(true)}
+              className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+              title="Describe"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <EventsPopover
+              resourceType="Node"
+              resourceName={node.name}
+              namespace="default"
+              onViewAll={() => setShowDescribe(true)}
+            />
             {onClose && (
               <button
                 onClick={onClose}
@@ -157,5 +180,6 @@ export const NodeCard = memo(function NodeCard({ node, onClose }: NodeCardProps)
         )}
       </CardContent>
     </Card>
+    </>
   );
 });

@@ -325,6 +325,55 @@ func (h *Handler) GetConfigMap(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, configmap)
 }
 
+// GetResourceEvents returns events for a specific resource
+func (h *Handler) GetResourceEvents(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	kind := chi.URLParam(r, "kind")
+	name := chi.URLParam(r, "name")
+
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Validate kind
+	validKinds := map[string]bool{
+		"Pod": true, "Node": true, "Deployment": true,
+		"Service": true, "ConfigMap": true, "ReplicaSet": true,
+	}
+	if !validKinds[kind] {
+		http.Error(w, "invalid resource kind", http.StatusBadRequest)
+		return
+	}
+
+	events, err := h.k8sClient.GetResourceEvents(r.Context(), namespace, kind, name)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch events")
+		return
+	}
+
+	respondJSON(w, events)
+}
+
+// GetServiceEndpoints returns endpoints for a specific service
+func (h *Handler) GetServiceEndpoints(w http.ResponseWriter, r *http.Request) {
+	namespace := chi.URLParam(r, "namespace")
+	name := chi.URLParam(r, "name")
+
+	if !validateK8sName(namespace) || !validateK8sName(name) {
+		http.Error(w, "invalid namespace or name parameter", http.StatusBadRequest)
+		return
+	}
+
+	endpoints, err := h.k8sClient.GetServiceEndpoints(r.Context(), namespace, name)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch endpoints")
+		return
+	}
+
+	respondJSON(w, endpoints)
+}
+
 func respondJSON(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)

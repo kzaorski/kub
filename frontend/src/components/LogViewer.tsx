@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { FileText, Download, Search, X, RefreshCw, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useLogStream } from '@/hooks/useLogStream';
-import type { Pod, LogOptions } from '@/types/k8s';
+import type { Pod } from '@/types/k8s';
 
 interface LogViewerProps {
   pod: Pod;

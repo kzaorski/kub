@@ -67,8 +67,10 @@ func convertPod(p corev1.Pod) models.Pod {
 
 	for _, c := range p.Spec.Containers {
 		container := models.Container{
-			Name:  c.Name,
-			Image: c.Image,
+			Name:    c.Name,
+			Image:   c.Image,
+			Command: c.Command,
+			Args:    c.Args,
 		}
 
 		// Find container status
@@ -77,7 +79,79 @@ func convertPod(p corev1.Pod) models.Pod {
 				container.Ready = cs.Ready
 				container.RestartCount = cs.RestartCount
 				container.State = getContainerState(cs.State)
+				container.StateDetails = getContainerStateDetails(cs.State)
+				if cs.State.Running != nil {
+					startedAt := cs.State.Running.StartedAt.Time
+					container.StartedAt = &startedAt
+				}
 				break
+			}
+		}
+
+		// Convert volume mounts
+		for _, vm := range c.VolumeMounts {
+			container.VolumeMounts = append(container.VolumeMounts, models.VolumeMount{
+				Name:      vm.Name,
+				MountPath: vm.MountPath,
+				ReadOnly:  vm.ReadOnly,
+				SubPath:   vm.SubPath,
+			})
+		}
+
+		// Convert env vars (limit to avoid large payloads)
+		for _, env := range c.Env {
+			envVar := models.EnvVar{Name: env.Name}
+			if env.Value != "" {
+				envVar.Value = env.Value
+			} else if env.ValueFrom != nil {
+				if env.ValueFrom.SecretKeyRef != nil {
+					envVar.ValueFrom = fmt.Sprintf("Secret:%s/%s", env.ValueFrom.SecretKeyRef.Name, env.ValueFrom.SecretKeyRef.Key)
+				} else if env.ValueFrom.ConfigMapKeyRef != nil {
+					envVar.ValueFrom = fmt.Sprintf("ConfigMap:%s/%s", env.ValueFrom.ConfigMapKeyRef.Name, env.ValueFrom.ConfigMapKeyRef.Key)
+				} else if env.ValueFrom.FieldRef != nil {
+					envVar.ValueFrom = fmt.Sprintf("FieldRef:%s", env.ValueFrom.FieldRef.FieldPath)
+				}
+			}
+			container.Env = append(container.Env, envVar)
+		}
+
+		// Convert ports
+		for _, port := range c.Ports {
+			container.Ports = append(container.Ports, models.ContainerPort{
+				Name:          port.Name,
+				ContainerPort: port.ContainerPort,
+				Protocol:      string(port.Protocol),
+			})
+		}
+
+		// Convert resources
+		if c.Resources.Requests != nil || c.Resources.Limits != nil {
+			container.Resources = models.ResourceRequirements{}
+			if c.Resources.Requests != nil {
+				if cpu := c.Resources.Requests.Cpu(); cpu != nil && !cpu.IsZero() {
+					container.Resources.RequestsCPU = cpu.String()
+				}
+				if mem := c.Resources.Requests.Memory(); mem != nil && !mem.IsZero() {
+					container.Resources.RequestsMemory = mem.String()
+				}
+			}
+			if c.Resources.Limits != nil {
+				if cpu := c.Resources.Limits.Cpu(); cpu != nil && !cpu.IsZero() {
+					container.Resources.LimitsCPU = cpu.String()
+				}
+				if mem := c.Resources.Limits.Memory(); mem != nil && !mem.IsZero() {
+					container.Resources.LimitsMemory = mem.String()
+				}
+			}
+		}
+
+		// Convert security context
+		if c.SecurityContext != nil {
+			container.SecurityContext = &models.SecurityContext{
+				RunAsUser:    c.SecurityContext.RunAsUser,
+				RunAsNonRoot: c.SecurityContext.RunAsNonRoot,
+				ReadOnlyFS:   c.SecurityContext.ReadOnlyRootFilesystem,
+				Privileged:   c.SecurityContext.Privileged,
 			}
 		}
 
@@ -129,23 +203,73 @@ func convertPod(p corev1.Pod) models.Pod {
 
 	status := getPodStatus(p)
 
+	// Convert conditions
+	conditions := make([]models.PodCondition, 0, len(p.Status.Conditions))
+	for _, cond := range p.Status.Conditions {
+		conditions = append(conditions, models.PodCondition{
+			Type:               string(cond.Type),
+			Status:             string(cond.Status),
+			LastTransitionTime: cond.LastTransitionTime.Time,
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+		})
+	}
+
+	// Convert volumes
+	volumes := make([]models.Volume, 0, len(p.Spec.Volumes))
+	for _, v := range p.Spec.Volumes {
+		vol := models.Volume{Name: v.Name}
+		vol.Type, vol.Source = getVolumeTypeAndSource(v)
+		volumes = append(volumes, vol)
+	}
+
+	// Convert owner references
+	ownerRefs := make([]models.OwnerReference, 0, len(p.OwnerReferences))
+	for _, ref := range p.OwnerReferences {
+		ownerRefs = append(ownerRefs, models.OwnerReference{
+			Kind: ref.Kind,
+			Name: ref.Name,
+			UID:  string(ref.UID),
+		})
+	}
+
+	// Convert tolerations
+	tolerations := make([]models.Toleration, 0, len(p.Spec.Tolerations))
+	for _, t := range p.Spec.Tolerations {
+		tolerations = append(tolerations, models.Toleration{
+			Key:      t.Key,
+			Operator: string(t.Operator),
+			Value:    t.Value,
+			Effect:   string(t.Effect),
+		})
+	}
+
 	return models.Pod{
-		Name:          p.Name,
-		Namespace:     p.Namespace,
-		Status:        status,
-		Phase:         string(p.Status.Phase),
-		Ready:         ready,
-		Restarts:      totalRestarts,
-		Age:           age,
-		IP:            ip,
-		Node:          p.Spec.NodeName,
-		Labels:        p.Labels,
-		CreatedAt:     p.CreationTimestamp.Time,
-		Containers:    containers,
-		CPURequest:    totalCPURequest,
-		CPULimit:      totalCPULimit,
-		MemoryRequest: totalMemRequest,
-		MemoryLimit:   totalMemLimit,
+		Name:            p.Name,
+		Namespace:       p.Namespace,
+		Status:          status,
+		Phase:           string(p.Status.Phase),
+		Ready:           ready,
+		Restarts:        totalRestarts,
+		Age:             age,
+		IP:              ip,
+		Node:            p.Spec.NodeName,
+		Labels:          p.Labels,
+		Annotations:     p.Annotations,
+		CreatedAt:       p.CreationTimestamp.Time,
+		Containers:      containers,
+		CPURequest:      totalCPURequest,
+		CPULimit:        totalCPULimit,
+		MemoryRequest:   totalMemRequest,
+		MemoryLimit:     totalMemLimit,
+		Conditions:      conditions,
+		Volumes:         volumes,
+		OwnerReferences: ownerRefs,
+		Tolerations:     tolerations,
+		NodeSelector:    p.Spec.NodeSelector,
+		ServiceAccount:  p.Spec.ServiceAccountName,
+		QOSClass:        string(p.Status.QOSClass),
+		PriorityClass:   p.Spec.PriorityClassName,
 	}
 }
 
@@ -231,6 +355,49 @@ func getContainerState(state corev1.ContainerState) string {
 		return "Terminated"
 	}
 	return "Unknown"
+}
+
+func getContainerStateDetails(state corev1.ContainerState) string {
+	if state.Running != nil {
+		return fmt.Sprintf("Started at %s", state.Running.StartedAt.Time.Format(time.RFC3339))
+	}
+	if state.Waiting != nil {
+		if state.Waiting.Message != "" {
+			return state.Waiting.Message
+		}
+		return state.Waiting.Reason
+	}
+	if state.Terminated != nil {
+		details := fmt.Sprintf("Exit code: %d", state.Terminated.ExitCode)
+		if state.Terminated.Message != "" {
+			details += ", " + state.Terminated.Message
+		}
+		return details
+	}
+	return ""
+}
+
+func getVolumeTypeAndSource(v corev1.Volume) (string, string) {
+	switch {
+	case v.ConfigMap != nil:
+		return "ConfigMap", v.ConfigMap.Name
+	case v.Secret != nil:
+		return "Secret", v.Secret.SecretName
+	case v.PersistentVolumeClaim != nil:
+		return "PVC", v.PersistentVolumeClaim.ClaimName
+	case v.EmptyDir != nil:
+		return "EmptyDir", ""
+	case v.HostPath != nil:
+		return "HostPath", v.HostPath.Path
+	case v.Projected != nil:
+		return "Projected", ""
+	case v.DownwardAPI != nil:
+		return "DownwardAPI", ""
+	case v.NFS != nil:
+		return "NFS", v.NFS.Server + ":" + v.NFS.Path
+	default:
+		return "Unknown", ""
+	}
 }
 
 func formatDuration(d time.Duration) string {

@@ -1,7 +1,9 @@
-import { memo } from "react";
-import { Clock, Hash, X } from "lucide-react";
+import { memo, useState } from "react";
+import { Clock, Hash, X, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EventsPopover } from "@/components/EventsPopover";
+import { DescribeModal } from "@/components/DescribeModal";
 import { cn } from "@/lib/utils";
 import type { ConfigMap } from "@/types/k8s";
 
@@ -11,7 +13,16 @@ interface ConfigMapCardProps {
 }
 
 export const ConfigMapCard = memo(function ConfigMapCard({ configmap, onClose }: ConfigMapCardProps) {
+  const [showDescribe, setShowDescribe] = useState(false);
   return (
+    <>
+    <DescribeModal
+      isOpen={showDescribe}
+      onClose={() => setShowDescribe(false)}
+      resourceType="ConfigMap"
+      resource={configmap}
+      namespace={configmap.namespace}
+    />
     <Card
       className={cn(
         "transition-all duration-300 hover:shadow-md",
@@ -29,6 +40,19 @@ export const ConfigMapCard = memo(function ConfigMapCard({ configmap, onClose }:
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{configmap.dataCount} {configmap.dataCount === 1 ? 'key' : 'keys'}</Badge>
+            <button
+              onClick={() => setShowDescribe(true)}
+              className="h-6 w-6 rounded-md hover:bg-accent flex items-center justify-center transition-colors"
+              title="Describe"
+            >
+              <Info className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <EventsPopover
+              resourceType="ConfigMap"
+              resourceName={configmap.name}
+              namespace={configmap.namespace}
+              onViewAll={() => setShowDescribe(true)}
+            />
             {onClose && (
               <button
                 onClick={onClose}
@@ -70,5 +94,6 @@ export const ConfigMapCard = memo(function ConfigMapCard({ configmap, onClose }:
         )}
       </CardContent>
     </Card>
+    </>
   );
 });

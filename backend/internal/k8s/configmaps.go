@@ -48,21 +48,34 @@ func (c *Client) GetConfigMap(ctx context.Context, namespace, name string) (*mod
 
 func convertConfigMap(cm corev1.ConfigMap) models.ConfigMap {
 	// Get data count and keys
-	dataCount := len(cm.Data)
+	dataCount := len(cm.Data) + len(cm.BinaryData)
 	keys := make([]string, 0, dataCount)
 	for k := range cm.Data {
 		keys = append(keys, k)
+	}
+	for k := range cm.BinaryData {
+		keys = append(keys, k)
+	}
+
+	// Convert binary data keys (show size instead of content)
+	binaryDataInfo := make(map[string]string)
+	for k, v := range cm.BinaryData {
+		binaryDataInfo[k] = fmt.Sprintf("<%d bytes>", len(v))
 	}
 
 	// Calculate age
 	age := formatDuration(time.Since(cm.CreationTimestamp.Time))
 
 	return models.ConfigMap{
-		Name:      cm.Name,
-		Namespace: cm.Namespace,
-		DataCount: dataCount,
-		Keys:      keys,
-		Age:       age,
-		CreatedAt: cm.CreationTimestamp.Time,
+		Name:        cm.Name,
+		Namespace:   cm.Namespace,
+		DataCount:   dataCount,
+		Keys:        keys,
+		Age:         age,
+		CreatedAt:   cm.CreationTimestamp.Time,
+		Data:        cm.Data,
+		BinaryData:  binaryDataInfo,
+		Labels:      cm.Labels,
+		Annotations: cm.Annotations,
 	}
 }

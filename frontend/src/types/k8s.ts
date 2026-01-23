@@ -9,6 +9,7 @@ export interface Pod {
   ip: string;
   node: string;
   labels: Record<string, string>;
+  annotations?: Record<string, string>;
   createdAt: string;
   containers: Container[];
   cpuUsage: number;
@@ -17,6 +18,42 @@ export interface Pod {
   cpuLimit: number;
   memoryRequest: number;
   memoryLimit: number;
+  // Extended fields for describe
+  conditions?: PodCondition[];
+  volumes?: Volume[];
+  ownerReferences?: OwnerReference[];
+  tolerations?: Toleration[];
+  nodeSelector?: Record<string, string>;
+  serviceAccount?: string;
+  qosClass?: string;
+  priorityClass?: string;
+}
+
+export interface PodCondition {
+  type: string;
+  status: string;
+  lastTransitionTime: string;
+  reason?: string;
+  message?: string;
+}
+
+export interface Volume {
+  name: string;
+  type: string;
+  source: string;
+}
+
+export interface OwnerReference {
+  kind: string;
+  name: string;
+  uid: string;
+}
+
+export interface Toleration {
+  key?: string;
+  operator?: string;
+  value?: string;
+  effect?: string;
 }
 
 export interface Container {
@@ -25,6 +62,48 @@ export interface Container {
   ready: boolean;
   restartCount: number;
   state: string;
+  stateDetails?: string;
+  startedAt?: string;
+  volumeMounts?: VolumeMount[];
+  env?: EnvVar[];
+  ports?: ContainerPort[];
+  resources?: ResourceRequirements;
+  securityContext?: SecurityContext;
+  command?: string[];
+  args?: string[];
+}
+
+export interface VolumeMount {
+  name: string;
+  mountPath: string;
+  readOnly: boolean;
+  subPath?: string;
+}
+
+export interface EnvVar {
+  name: string;
+  value?: string;
+  valueFrom?: string;
+}
+
+export interface ContainerPort {
+  name?: string;
+  containerPort: number;
+  protocol: string;
+}
+
+export interface ResourceRequirements {
+  requestsCpu?: string;
+  requestsMemory?: string;
+  limitsCpu?: string;
+  limitsMemory?: string;
+}
+
+export interface SecurityContext {
+  runAsUser?: number;
+  runAsNonRoot?: boolean;
+  readOnlyRootFilesystem?: boolean;
+  privileged?: boolean;
 }
 
 export interface Namespace {
@@ -55,6 +134,13 @@ export interface Node {
   age: string;
   createdAt: string;
   conditions: NodeCondition[];
+  // Extended fields for describe
+  labels?: Record<string, string>;
+  annotations?: Record<string, string>;
+  taints?: Taint[];
+  addresses?: NodeAddress[];
+  images?: string[];
+  podCIDR?: string;
 }
 
 export interface NodeCondition {
@@ -62,6 +148,17 @@ export interface NodeCondition {
   status: string;
   reason: string;
   message: string;
+}
+
+export interface Taint {
+  key: string;
+  value?: string;
+  effect: string;
+}
+
+export interface NodeAddress {
+  type: string;
+  address: string;
 }
 
 export interface Context {
@@ -131,6 +228,21 @@ export interface Deployment {
   age: string;
   createdAt: string;
   animationClass?: string;
+  // Extended fields for describe
+  annotations?: Record<string, string>;
+  conditions?: DeploymentCondition[];
+  maxSurge?: string;
+  maxUnavailable?: string;
+  podTemplateImage?: string;
+  revisionHistoryLimit?: number;
+}
+
+export interface DeploymentCondition {
+  type: string;
+  status: string;
+  lastTransitionTime: string;
+  reason?: string;
+  message?: string;
 }
 
 export interface Service {
@@ -144,6 +256,12 @@ export interface Service {
   age: string;
   createdAt: string;
   animationClass?: string;
+  // Extended fields for describe
+  labels?: Record<string, string>;
+  annotations?: Record<string, string>;
+  sessionAffinity?: string;
+  externalName?: string;
+  loadBalancerIP?: string;
 }
 
 export interface ServicePort {
@@ -162,6 +280,11 @@ export interface ConfigMap {
   age: string;
   createdAt: string;
   animationClass?: string;
+  // Extended fields for describe
+  data?: Record<string, string>;
+  binaryData?: Record<string, string>;
+  labels?: Record<string, string>;
+  annotations?: Record<string, string>;
 }
 
 export interface LogOptions {
@@ -175,3 +298,38 @@ export interface LogStreamMessage {
   type: 'log' | 'error' | 'end';
   data: string;
 }
+
+// Event types for describe functionality
+export interface Event {
+  type: string;      // Normal, Warning
+  reason: string;    // Scheduled, Pulling, Started, etc.
+  message: string;
+  count: number;
+  firstSeen: string;
+  lastSeen: string;
+  source: string;    // kubelet, scheduler, etc.
+  object: string;    // Pod/nginx-abc123, etc.
+}
+
+// Endpoint types for Service describe
+export interface Endpoint {
+  addresses: EndpointAddress[];
+  ports: EndpointPort[];
+  notReadyAddresses?: EndpointAddress[];
+}
+
+export interface EndpointAddress {
+  ip: string;
+  hostname?: string;
+  nodeName?: string;
+  targetRef?: string; // Pod/nginx-abc123
+}
+
+export interface EndpointPort {
+  name?: string;
+  port: number;
+  protocol: string;
+}
+
+// Type for resource kinds that support describe
+export type DescribableResource = 'Pod' | 'Node' | 'Deployment' | 'Service' | 'ConfigMap';
