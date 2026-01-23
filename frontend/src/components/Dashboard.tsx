@@ -10,6 +10,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ThemeToggle } from "./theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -68,11 +69,14 @@ export function Dashboard() {
               )}
             </Badge>
           </div>
-          <ContextSelector
-            selectedNamespace={namespace}
-            onNamespaceChange={setNamespace}
-            onContextChange={handleContextChange}
-          />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <ContextSelector
+              selectedNamespace={namespace}
+              onNamespaceChange={setNamespace}
+              onContextChange={handleContextChange}
+            />
+          </div>
         </div>
       </header>
 
