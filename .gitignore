@@ -51,3 +51,6 @@ coverage/
 # Misc
 *.bak
 *.tmp
+
+# Claude Code
+.claude/
