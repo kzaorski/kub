@@ -54,3 +54,7 @@ coverage/
 
 # Claude Code
 .claude/
+
+# Local documentation (not committed)
+docs/CODEMAPS/
+.reports/
