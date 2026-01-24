@@ -67,5 +67,6 @@ func convertEvent(e corev1.Event) models.Event {
 		LastSeen:  e.LastTimestamp.Time,
 		Source:    source,
 		Object:    object,
+		FieldPath: e.InvolvedObject.FieldPath,
 	}
 }

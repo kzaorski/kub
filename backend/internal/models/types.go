@@ -336,6 +336,7 @@ type Event struct {
 	LastSeen  time.Time `json:"lastSeen"`
 	Source    string    `json:"source"`    // kubelet, scheduler, etc.
 	Object    string    `json:"object"`    // Pod/nginx-abc123, etc.
+	FieldPath string    `json:"fieldPath,omitempty"` // spec.containers{name}, spec.containers[index]
 }
 
 // Endpoint represents a Kubernetes endpoint for a service

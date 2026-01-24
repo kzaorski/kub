@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Box } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, parseEventFieldPath } from "@/lib/utils";
 import type { Event } from "@/types/k8s";
 
 interface EventsSectionProps {
@@ -41,6 +41,12 @@ export const EventsSection = memo(function EventsSection({ events, maxItems }: E
                 <Badge variant={event.type === "Warning" ? "warning" : "secondary"} className="text-xs">
                   {event.reason}
                 </Badge>
+                {event.fieldPath && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Box className="h-3 w-3" />
+                    {parseEventFieldPath(event.fieldPath)}
+                  </Badge>
+                )}
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatEventTime(event.lastSeen)}

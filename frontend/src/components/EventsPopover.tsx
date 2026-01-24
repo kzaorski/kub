@@ -1,7 +1,7 @@
 import { memo, useState, useEffect, useCallback, useRef } from "react";
-import { Bell, AlertTriangle, CheckCircle2, Clock, X, RefreshCw, ExternalLink } from "lucide-react";
+import { Bell, AlertTriangle, CheckCircle2, Clock, X, RefreshCw, ExternalLink, Box } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, parseEventFieldPath } from "@/lib/utils";
 import { getApiUrl } from "@/lib/api";
 import type { Event, DescribableResource } from "@/types/k8s";
 
@@ -173,6 +173,12 @@ export const EventsPopover = memo(function EventsPopover({
                           >
                             {event.reason}
                           </Badge>
+                          {event.fieldPath && (
+                            <Badge variant="outline" className="text-[10px] px-1 py-0 flex items-center gap-0.5">
+                              <Box className="h-2.5 w-2.5" />
+                              {parseEventFieldPath(event.fieldPath)}
+                            </Badge>
+                          )}
                           <span className="text-muted-foreground flex items-center gap-0.5">
                             <Clock className="h-2.5 w-2.5" />
                             {formatEventTime(event.lastSeen)}

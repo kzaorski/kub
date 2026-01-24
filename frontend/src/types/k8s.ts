@@ -309,6 +309,7 @@ export interface Event {
   lastSeen: string;
   source: string;    // kubelet, scheduler, etc.
   object: string;    // Pod/nginx-abc123, etc.
+  fieldPath?: string; // spec.containers{name}, spec.containers[index]
 }
 
 // Endpoint types for Service describe

@@ -106,3 +106,18 @@ export function getDeploymentStatusColor(readyReplicas: number, replicas: number
   return 'bg-gray-400';
 }
 
+// Event fieldPath parser for container identification
+export function parseEventFieldPath(fieldPath: string | undefined): string | null {
+  if (!fieldPath) return null;
+
+  // Match spec.containers{name} format
+  const nameMatch = fieldPath.match(/spec\.containers\{([^}]+)\}/);
+  if (nameMatch?.[1]) return nameMatch[1];
+
+  // Match spec.containers[index] format
+  const indexMatch = fieldPath.match(/spec\.containers\[(\d+)\]/);
+  if (indexMatch) return `container #${parseInt(indexMatch[1], 10) + 1}`;
+
+  return null;
+}
+
