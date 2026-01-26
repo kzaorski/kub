@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -68,6 +69,36 @@ func (h *Handler) GetPods(w http.ResponseWriter, r *http.Request) {
 	}
 
 	respondJSON(w, pods)
+}
+
+// GetPodsPaginated returns pods with pagination support
+func (h *Handler) GetPodsPaginated(w http.ResponseWriter, r *http.Request) {
+	namespace := r.URL.Query().Get("namespace")
+	if !validateK8sName(namespace) {
+		http.Error(w, "invalid namespace parameter", http.StatusBadRequest)
+		return
+	}
+
+	// Parse limit (default 100, max 500)
+	var limit int64 = 100
+	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
+		parsed, err := strconv.ParseInt(limitStr, 10, 64)
+		if err != nil || parsed < 1 || parsed > 500 {
+			http.Error(w, "invalid limit parameter (must be 1-500)", http.StatusBadRequest)
+			return
+		}
+		limit = parsed
+	}
+
+	continueToken := r.URL.Query().Get("continue")
+
+	result, err := h.k8sClient.GetPodsPaginated(r.Context(), namespace, limit, continueToken)
+	if err != nil {
+		respondError(w, err, http.StatusInternalServerError, "failed to fetch pods")
+		return
+	}
+
+	respondJSON(w, result)
 }
 
 // GetPod returns a specific pod

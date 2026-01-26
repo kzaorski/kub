@@ -334,3 +334,11 @@ export interface EndpointPort {
 
 // Type for resource kinds that support describe
 export type DescribableResource = 'Pod' | 'Node' | 'Deployment' | 'Service' | 'ConfigMap';
+
+// Paginated response types
+export interface PaginatedPods {
+  pods: Pod[];
+  totalCount: number;
+  continueToken?: string;
+  hasMore: boolean;
+}

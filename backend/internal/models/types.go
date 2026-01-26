@@ -127,6 +127,14 @@ type Namespace struct {
 	Status string `json:"status"`
 }
 
+// PaginatedPods represents a paginated list of pods
+type PaginatedPods struct {
+	Pods          []Pod  `json:"pods"`
+	TotalCount    int    `json:"totalCount"`
+	ContinueToken string `json:"continueToken,omitempty"`
+	HasMore       bool   `json:"hasMore"`
+}
+
 // Node represents a Kubernetes node
 type Node struct {
 	Name               string            `json:"name"`

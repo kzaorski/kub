@@ -14,6 +14,17 @@ import (
 	"github.com/krzyzao/kub/internal/k8s"
 )
 
+const (
+	// Time allowed to read the next pong message from the client
+	pongWait = 60 * time.Second
+	// Send pings to client with this period (must be less than pongWait)
+	pingPeriod = 30 * time.Second
+	// Time allowed to write a message to the client
+	writeWait = 10 * time.Second
+	// Maximum message size allowed from client
+	maxMessageSize = 512
+)
+
 // LogStreamHub manages individual log stream connections
 type LogStreamHub struct {
 	k8sClient *k8s.Client
@@ -61,6 +72,14 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
+	// Configure connection for proper timeout handling
+	conn.SetReadLimit(maxMessageSize)
+	conn.SetReadDeadline(time.Now().Add(pongWait))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
 	log.Printf("Log stream connected for pod %s/%s, container %s", namespace, podName, container)
 
 	// Create context for this stream
@@ -74,7 +93,7 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 	go h.streamLogs(ctx, namespace, podName, container, previous, timestamps, logChan, errChan)
 
 	// Send ping/pong keepalive
-	ticker := time.NewTicker(30 * time.Second)
+	ticker := time.NewTicker(pingPeriod)
 	defer ticker.Stop()
 
 	done := make(chan struct{})
@@ -118,6 +137,7 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 			sendJSON(conn, logStreamMessage{Type: "error", Data: err.Error()})
 			return
 		case <-ticker.C:
+			conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				return
 			}
@@ -174,6 +194,7 @@ func (h *LogStreamHub) streamLogs(
 }
 
 func sendJSON(conn *websocket.Conn, v interface{}) error {
+	conn.SetWriteDeadline(time.Now().Add(writeWait))
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -1,6 +1,11 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { getApiUrl } from '@/lib/api';
 import type { Pod, LogOptions } from '@/types/k8s';
+
+// Max chunks before consolidation (prevents unbounded growth)
+const MAX_LOG_CHUNKS = 10000;
+// Number of old chunks to consolidate when limit is reached
+const CONSOLIDATE_THRESHOLD = 2000;
 
 interface UseLogStreamResult {
   logs: string;
@@ -15,8 +20,24 @@ interface UseLogStreamResult {
 }
 
 export function useLogStream(pod: Pod): UseLogStreamResult {
-  const [logs, setLogs] = useState('');
+  // Use array of chunks to avoid O(n²) string concatenation
+  const [logChunks, setLogChunks] = useState<string[]>([]);
   const [containers, setContainers] = useState<string[]>([]);
+
+  // Memoize the joined logs string
+  const logs = useMemo(() => logChunks.join(''), [logChunks]);
+
+  // Append a log chunk efficiently
+  const appendLogChunk = useCallback((chunk: string) => {
+    setLogChunks((prev) => {
+      if (prev.length >= MAX_LOG_CHUNKS) {
+        // Consolidate old chunks to prevent memory growth
+        const consolidated = prev.slice(CONSOLIDATE_THRESHOLD).join('');
+        return [consolidated, chunk];
+      }
+      return [...prev, chunk];
+    });
+  }, []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -88,7 +109,7 @@ export function useLogStream(pod: Pod): UseLogStreamResult {
 
       const data = await response.json();
       if (mountedRef.current) {
-        setLogs(data.logs || '');
+        setLogChunks(data.logs ? [data.logs] : []);
       }
     } catch (err) {
       if (err instanceof Error && err.name !== 'AbortError' && mountedRef.current) {
@@ -110,7 +131,7 @@ export function useLogStream(pod: Pod): UseLogStreamResult {
 
     setIsStreaming(true);
     setError(null);
-    setLogs(''); // Clear previous logs
+    setLogChunks([]); // Clear previous logs
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.host;
@@ -135,13 +156,13 @@ export function useLogStream(pod: Pod): UseLogStreamResult {
       try {
         const message = JSON.parse(event.data);
         if (message.type === 'log') {
-          setLogs((prev) => prev + message.data);
+          appendLogChunk(message.data);
         } else if (message.type === 'error') {
           setError(message.data);
         }
       } catch (e) {
         // If not JSON, treat as raw log line
-        setLogs((prev) => prev + event.data);
+        appendLogChunk(event.data);
       }
     };
 
@@ -155,7 +176,7 @@ export function useLogStream(pod: Pod): UseLogStreamResult {
       setIsStreaming(false);
       wsRef.current = null;
     };
-  }, [pod.namespace, pod.name]);
+  }, [pod.namespace, pod.name, appendLogChunk]);
 
   // Stop WebSocket stream
   const stopStream = useCallback(() => {

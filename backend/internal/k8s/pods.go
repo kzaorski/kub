@@ -36,6 +36,49 @@ func (c *Client) GetPods(ctx context.Context, namespace string) ([]models.Pod, e
 	return pods, nil
 }
 
+// GetPodsPaginated returns pods with pagination support
+func (c *Client) GetPodsPaginated(ctx context.Context, namespace string, limit int64, continueToken string) (*models.PaginatedPods, error) {
+	// Clamp limit to valid range
+	if limit < 1 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+
+	listOpts := metav1.ListOptions{
+		Limit:    limit,
+		Continue: continueToken,
+	}
+
+	var podList *corev1.PodList
+	var err error
+
+	if namespace == "" || namespace == "all" {
+		podList, err = c.Clientset.CoreV1().Pods("").List(ctx, listOpts)
+	} else {
+		podList, err = c.Clientset.CoreV1().Pods(namespace).List(ctx, listOpts)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods: %w", err)
+	}
+
+	pods := make([]models.Pod, 0, len(podList.Items))
+	for _, p := range podList.Items {
+		pods = append(pods, convertPod(p))
+	}
+
+	result := &models.PaginatedPods{
+		Pods:          pods,
+		TotalCount:    len(pods),
+		ContinueToken: podList.Continue,
+		HasMore:       podList.Continue != "",
+	}
+
+	return result, nil
+}
+
 // GetPod returns a specific pod
 func (c *Client) GetPod(ctx context.Context, namespace, name string) (*models.Pod, error) {
 	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})

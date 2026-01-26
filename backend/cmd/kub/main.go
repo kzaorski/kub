@@ -36,6 +36,10 @@ func main() {
 	// Create router
 	r := chi.NewRouter()
 
+	// Rate limiter: 100 requests/second, burst of 200
+	rateLimiter := api.NewRateLimiter(100, 200)
+	r.Use(rateLimiter.RateLimitMiddleware)
+
 	// Security headers middleware
 	r.Use(func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +66,7 @@ func main() {
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/namespaces", handler.GetNamespaces)
 		r.Get("/pods", handler.GetPods)
+		r.Get("/pods/paginated", handler.GetPodsPaginated)
 		r.Get("/pods/{namespace}/{name}", handler.GetPod)
 		r.Get("/pods/{namespace}/{name}/containers", handler.GetContainers)
 		r.Get("/pods/{namespace}/{name}/logs", handler.GetPodLogs)
