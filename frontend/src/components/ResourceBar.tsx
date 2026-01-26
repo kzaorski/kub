@@ -76,7 +76,7 @@ export function ResourceBar({ label, icon, usage, request, limit, formatFn }: Re
       <div className="flex gap-2 text-muted-foreground items-center">
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className={cn(request === 0 && "text-muted-foreground/50")}>
+            <span className={cn(request === 0 && "text-muted-foreground/50")} tabIndex={0}>
               {request > 0 ? `${percentOfRequest.toFixed(0)}%` : "-"}/R
             </span>
           </TooltipTrigger>
@@ -91,7 +91,7 @@ export function ResourceBar({ label, icon, usage, request, limit, formatFn }: Re
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className={cn(limit === 0 && "text-muted-foreground/50")}>
+            <span className={cn(limit === 0 && "text-muted-foreground/50")} tabIndex={0}>
               {limit > 0 ? `${percentOfLimit.toFixed(0)}%` : "-"}/L
             </span>
           </TooltipTrigger>
@@ -108,7 +108,11 @@ export function ResourceBar({ label, icon, usage, request, limit, formatFn }: Re
         {hasNoConstraints && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <AlertTriangle className="h-3 w-3 text-amber-500" />
+              <AlertTriangle
+                className="h-3 w-3 text-amber-500"
+                tabIndex={0}
+                aria-label="Warning: no resource constraints defined"
+              />
             </TooltipTrigger>
             <TooltipContent>
               <p>No resource constraints defined. Pod can consume unbounded {label.toLowerCase()}.</p>
