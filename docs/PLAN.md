@@ -1,30 +1,30 @@
-# KUB - Kubernetes Dashboard z Wizualizacjami
+# KUB - Kubernetes Dashboard with Visualizations
 
-## Cel
-Lokalna aplikacja webowa do monitoringu klastra K8s z atrakcyjnymi wizualizacjami, podobna do k9s ale w przeglądarce.
+## Goal
+Local web application for monitoring K8s clusters with attractive visualizations in a browser.
 
-## Stos Technologiczny
+## Tech Stack
 
 ### Backend: Go
-- **Dlaczego**: Natywne `client-go` (oficjalna biblioteka K8s), świetna obsługa WebSocket, jeden binary, szybki start
-- **Biblioteki**: client-go, gorilla/websocket, chi (router)
+- **Why**: Native `client-go` (official K8s library), great WebSocket support, single binary, fast startup
+- **Libraries**: client-go, gorilla/websocket, chi (router)
 
 ### Frontend: React + TypeScript + Tailwind
-- **Dlaczego**: Bogaty ekosystem wykresów, shadcn/ui dla komponentów, dobra obsługa real-time
-- **Biblioteki**: Vite, shadcn/ui, Recharts (wykresy), Lucide (ikony)
+- **Why**: Rich charting ecosystem, shadcn/ui for components, good real-time support
+- **Libraries**: Vite, shadcn/ui, Recharts (charts), Lucide (icons)
 
 ---
 
-## Architektura
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Przeglądarka                         │
+│                    Browser                              │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │           React Frontend (Vite)                  │   │
-│  │  - Dashboard z wykresami CPU/RAM                │   │
-│  │  - Lista podów z real-time statusem             │   │
-│  │  - Wizualizacja lifecycle podów                 │   │
+│  │  - Dashboard with CPU/RAM charts                │   │
+│  │  - Pod list with real-time status               │   │
+│  │  - Pod lifecycle visualization                  │   │
 │  └──────────────────────┬──────────────────────────┘   │
 └─────────────────────────┼───────────────────────────────┘
                           │ HTTP + WebSocket
@@ -39,42 +39,42 @@ Lokalna aplikacja webowa do monitoringu klastra K8s z atrakcyjnymi wizualizacjam
 │                         │                               │
 │  ┌──────────────────────┴──────────────────────────┐   │
 │  │              Kubernetes Client (client-go)       │   │
-│  │  - Watch API dla real-time updates              │   │
-│  │  - Metrics Server dla CPU/RAM                   │   │
-│  │  - Kubeconfig z ~/.kube/config                  │   │
+│  │  - Watch API for real-time updates              │   │
+│  │  - Metrics Server for CPU/RAM                   │   │
+│  │  - Kubeconfig from ~/.kube/config               │   │
 │  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                           │
                           ▼
               ┌───────────────────────┐
-              │   Klaster Kubernetes  │
+              │   Kubernetes Cluster  │
               └───────────────────────┘
 ```
 
 ---
 
-## MVP - Funkcjonalności
+## MVP - Features
 
-### 1. Metryki CPU/RAM (wykresy)
-- Wykresy liniowe dla nodów i podów
-- Gauge (zegar) dla aktualnego wykorzystania
-- Wymaganie: Metrics Server w klastrze
+### 1. CPU/RAM Metrics (charts)
+- Line charts for nodes and pods
+- Gauge for current utilization
+- Requirement: Metrics Server in cluster
 
-### 2. Stan Podów z Lifecycle
-- Lista podów z kolorowym statusem (Running/Pending/Failed/Terminating)
-- **Real-time animacje** przy:
-  - Tworzeniu nowego poda (zielone podświetlenie, animacja "wchodzenia")
-  - Zabijaniu poda (czerwone podświetlenie, animacja "wychodzenia")
-  - Restarcie (żółta animacja przejścia)
-- Timeline ostatnich zmian stanów
+### 2. Pod Status with Lifecycle
+- Pod list with colored status (Running/Pending/Failed/Terminating)
+- **Real-time animations** when:
+  - Creating a new pod (green highlight, "entry" animation)
+  - Deleting a pod (red highlight, "exit" animation)
+  - Restarting (yellow transition animation)
+- Timeline of recent state changes
 
-### 3. Przełączanie kontekstu/namespace
-- Dropdown z dostępnymi kontekstami K8s
-- Filtrowanie po namespace
+### 3. Context/Namespace Switching
+- Dropdown with available K8s contexts
+- Filtering by namespace
 
 ---
 
-## Struktura Projektu
+## Project Structure
 
 ```
 kub/
@@ -108,17 +108,17 @@ kub/
 │   │   ├── components/
 │   │   │   ├── ui/              # shadcn components
 │   │   │   ├── Dashboard.tsx
-│   │   │   ├── PodList.tsx      # Lista z animacjami
-│   │   │   ├── PodCard.tsx      # Pojedynczy pod
-│   │   │   ├── NodeList.tsx     # Lista nodów
-│   │   │   ├── DeploymentList.tsx # Lista deployments
-│   │   │   ├── DeploymentCard.tsx # Pojedynczy deployment
-│   │   │   ├── ServiceList.tsx  # Lista services
-│   │   │   ├── ServiceCard.tsx  # Pojedynczy service
-│   │   │   ├── ConfigMapList.tsx # Lista configmaps
-│   │   │   ├── ConfigMapCard.tsx # Pojedynczy configmap
-│   │   │   ├── MetricsChart.tsx # Wykresy CPU/RAM
-│   │   │   ├── GaugeChart.tsx   # Zegary/gauge
+│   │   │   ├── PodList.tsx      # List with animations
+│   │   │   ├── PodCard.tsx      # Single pod
+│   │   │   ├── NodeList.tsx     # Node list
+│   │   │   ├── DeploymentList.tsx # Deployment list
+│   │   │   ├── DeploymentCard.tsx # Single deployment
+│   │   │   ├── ServiceList.tsx  # Service list
+│   │   │   ├── ServiceCard.tsx  # Single service
+│   │   │   ├── ConfigMapList.tsx # ConfigMap list
+│   │   │   ├── ConfigMapCard.tsx # Single configmap
+│   │   │   ├── MetricsChart.tsx # CPU/RAM charts
+│   │   │   ├── GaugeChart.tsx   # Gauges
 │   │   │   └── ContextSelector.tsx
 │   │   ├── hooks/
 │   │   │   ├── useWebSocket.ts  # WebSocket connection
@@ -139,71 +139,71 @@ kub/
 
 ---
 
-## Plan Implementacji
+## Implementation Plan
 
-### Faza 0: Inicjalizacja repozytorium ✅
-1. `git init` w folderze `/Users/krzyzao/dev/kub`
-2. Utworzenie `.gitignore` (node_modules, dist, binary Go, .env, itp.)
-3. Skopiowanie tego planu do `docs/PLAN.md` w projekcie
-4. Pierwszy commit
+### Phase 0: Repository Initialization ✅
+1. `git init` in `/Users/krzyzao/dev/kub` directory
+2. Create `.gitignore` (node_modules, dist, Go binary, .env, etc.)
+3. Copy this plan to `docs/PLAN.md` in the project
+4. First commit
 
-### Faza 1: Szkielet projektu ✅
-1. Inicjalizacja Go module + podstawowy serwer HTTP
-2. Inicjalizacja Vite + React + TypeScript + Tailwind
-3. Konfiguracja shadcn/ui
-4. Proxy dev server (Vite -> Go backend)
+### Phase 1: Project Skeleton ✅
+1. Initialize Go module + basic HTTP server
+2. Initialize Vite + React + TypeScript + Tailwind
+3. Configure shadcn/ui
+4. Dev server proxy (Vite -> Go backend)
 
-### Faza 2: Połączenie z K8s ✅
-1. Klient K8s z client-go (kubeconfig)
+### Phase 2: K8s Connection ✅
+1. K8s client with client-go (kubeconfig)
 2. REST endpoint: GET /api/namespaces
 3. REST endpoint: GET /api/pods?namespace=X
 4. REST endpoint: GET /api/nodes
 
-### Faza 3: Real-time (WebSocket) ✅
-1. WebSocket hub w Go
-2. Watch na pody z client-go
-3. Hook useWebSocket w React
-4. Real-time lista podów z animacjami lifecycle
+### Phase 3: Real-time (WebSocket) ✅
+1. WebSocket hub in Go
+2. Watch on pods with client-go
+3. useWebSocket hook in React
+4. Real-time pod list with lifecycle animations
 
-### Faza 4: Metryki i wizualizacje ✅
-1. Integracja z Metrics Server (metrics.k8s.io)
-2. Wykresy CPU/RAM z Recharts
-3. Gauge components dla aktualnych wartości
+### Phase 4: Metrics and Visualizations ✅
+1. Metrics Server integration (metrics.k8s.io)
+2. CPU/RAM charts with Recharts
+3. Gauge components for current values
 
-### Faza 5: Polish 🔄
+### Phase 5: Polish 🔄
 1. Context/namespace selector ✅
-2. Responsywny layout ✅
+2. Responsive layout ✅
 3. Error handling + loading states ✅
-4. Build produkcyjny (embed frontend w Go binary)
+4. Production build (embed frontend in Go binary)
 
 ---
 
-## Backlog (przyszłe funkcje)
-- [ ] Topologia klastra (grafy połączeń)
-- [ ] Timeline eventów
-- [ ] Logi podów (streaming)
-- [ ] Exec do kontenera (terminal w przeglądarce)
+## Backlog (future features)
+- [ ] Cluster topology (connection graphs)
+- [ ] Event timeline
+- [ ] Pod logs (streaming)
+- [ ] Exec into container (browser terminal)
 - [x] Deployments, Services, ConfigMaps
 - [ ] Dark mode
 
 ---
 
-## Weryfikacja
+## Verification
 
-1. **Uruchomienie**: `make dev` - startuje backend + frontend
-2. **Test połączenia**: Dashboard pokazuje listę namespace'ów
-3. **Test real-time**:
+1. **Startup**: `make dev` - starts backend + frontend
+2. **Connection test**: Dashboard shows namespace list
+3. **Real-time test**:
    ```bash
    kubectl run test-pod --image=nginx
    kubectl delete pod test-pod
    ```
-   Obserwować animacje w UI
-4. **Test metryk**: Wykresy CPU/RAM aktualizują się
+   Watch animations in UI
+4. **Metrics test**: CPU/RAM charts update
 
 ---
 
-## Wymagania systemowe
+## System Requirements
 - Go 1.21+
 - Node.js 18+
-- kubectl skonfigurowany (~/.kube/config)
-- Metrics Server w klastrze (dla metryk CPU/RAM)
+- kubectl configured (~/.kube/config)
+- Metrics Server in cluster (for CPU/RAM metrics)

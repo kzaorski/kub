@@ -1,6 +1,6 @@
 # KUB - Kubernetes Dashboard
 
-A local web application for monitoring Kubernetes clusters with attractive visualizations, similar to k9s but in the browser.
+A local web application for monitoring Kubernetes clusters with attractive visualizations in the browser.
 
 ## Features
 
