@@ -58,3 +58,4 @@ coverage/
 # Local documentation (not committed)
 docs/CODEMAPS/
 .reports/
+.shotgun/
