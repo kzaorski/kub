@@ -39,7 +39,9 @@ Not yet implemented. The application currently runs as a local binary.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `PORT` | Server listen port | `8080` |
 | `ALLOWED_ORIGINS` | Comma-separated list of allowed CORS origins | `http://localhost:5173,http://localhost:8080` |
+| `KUBECONFIG` | Path to kubeconfig file | `~/.kube/config` |
 
 ### Kubernetes Configuration
 
@@ -77,6 +79,7 @@ To capture logs:
 | WebSocket connections | 0-10 | >50 |
 | API response time | <100ms | >500ms |
 | Memory usage | <100MB | >500MB |
+| Rate limit hits (429) | 0-5/min | >50/min |
 
 ## Common Issues and Fixes
 
@@ -126,6 +129,15 @@ kubectl top nodes
 ```bash
 ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080 ./bin/kub
 ```
+
+### Issue: "429 Too Many Requests"
+
+**Cause**: Rate limiting triggered (>100 requests/second from same IP).
+
+**Fix**:
+1. This is expected behavior for rapid API calls
+2. Wait 1 second (see `Retry-After` header)
+3. For legitimate high-volume needs, consider using the paginated endpoint
 
 ### Issue: "go.mod requires go >= 1.25"
 
@@ -178,9 +190,11 @@ make build
 
 ### Features Implemented
 
+- **Rate Limiting**: 100 requests/second per IP, burst of 200 (returns 429 Too Many Requests)
 - **Input Validation**: Kubernetes name regex validation on all parameters
 - **Security Headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 - **Origin Checking**: WebSocket connections validate origin header
+- **WebSocket Timeouts**: Ping/pong keepalive (30s ping, 60s pong timeout, 10s write timeout)
 - **Context Timeout**: 30s timeout for WebSocket initial data fetch
 - **Generic Errors**: Detailed errors logged, generic messages to client
 

@@ -59,3 +59,4 @@ coverage/
 docs/CODEMAPS/
 .reports/
 .shotgun/
+.test/

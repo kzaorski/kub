@@ -81,7 +81,9 @@ make dev
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `PORT` | Server listen port | `8080` |
 | `ALLOWED_ORIGINS` | Comma-separated CORS origins | `http://localhost:5173,http://localhost:8080` |
+| `KUBECONFIG` | Path to kubeconfig file | `~/.kube/config` |
 
 ## Available Scripts
 
@@ -136,6 +138,8 @@ kubectl delete pod test-pod
 - [ ] CPU/RAM metrics display
 - [ ] Real-time WebSocket updates
 - [ ] Pod/Deployment/Service/ConfigMap cards expand
+- [ ] Rate limiting (test with rapid requests)
+- [ ] Paginated pods endpoint works
 
 ## Code Style
 
@@ -155,9 +159,9 @@ kubectl delete pod test-pod
 ```
 kub/
 ├── backend/
-│   ├── cmd/kub/          # Entry point, security middleware
+│   ├── cmd/kub/          # Entry point, router setup
 │   └── internal/
-│       ├── api/          # REST & WebSocket handlers
+│       ├── api/          # REST & WebSocket handlers, rate limiting
 │       ├── k8s/          # Kubernetes client operations
 │       └── models/       # Shared types
 ├── frontend/
