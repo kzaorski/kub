@@ -6,12 +6,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/krzyzao/kub/internal/config"
 	"github.com/krzyzao/kub/internal/k8s"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -27,13 +31,36 @@ const (
 
 // LogStreamHub manages individual log stream connections
 type LogStreamHub struct {
-	k8sClient *k8s.Client
+	k8sClient    *k8s.Client
+	tracer       trace.Tracer
+	meter        metric.Meter
+	linesStreamed metric.Int64Counter
+	streamErrors metric.Int64Counter
 }
 
 // NewLogStreamHub creates a new log stream hub
 func NewLogStreamHub(k8sClient *k8s.Client) *LogStreamHub {
+	tracer := otel.Tracer("kub/websocket/logs")
+	meter := otel.Meter("kub/websocket/logs")
+
+	// Initialize metrics
+	linesStreamed, _ := meter.Int64Counter(
+		"logs.lines.streamed",
+		metric.WithDescription("Total number of log lines streamed"),
+		metric.WithUnit("{line}"),
+	)
+	streamErrors, _ := meter.Int64Counter(
+		"logs.stream.errors",
+		metric.WithDescription("Number of log stream errors"),
+		metric.WithUnit("{error}"),
+	)
+
 	return &LogStreamHub{
-		k8sClient: k8sClient,
+		k8sClient:    k8sClient,
+		tracer:       tracer,
+		meter:        meter,
+		linesStreamed: linesStreamed,
+		streamErrors: streamErrors,
 	}
 }
 
@@ -45,6 +72,7 @@ type logStreamMessage struct {
 
 // HandleLogStream handles WebSocket connections for log streaming
 func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	// Extract parameters from query
 	namespace := r.URL.Query().Get("namespace")
 	podName := r.URL.Query().Get("pod")
@@ -59,18 +87,34 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 
 	// Check origin
 	if !checkOrigin(r) {
-		log.Printf("Rejected log stream WebSocket connection from origin: %s", r.Header.Get("Origin"))
+		config.ErrorCtx(ctx, "Rejected log stream WebSocket connection from origin",
+			config.String("origin", r.Header.Get("Origin")))
 		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
+	// Create connection-level span for WebSocket upgrade
+	ctx, span := h.tracer.Start(ctx, "ws.logs.stream", trace.WithAttributes(
+		attribute.String("ws.endpoint", "/ws/logs"),
+		attribute.String("k8s.namespace", namespace),
+		attribute.String("k8s.pod_name", podName),
+		attribute.String("k8s.container_name", container),
+		attribute.Bool("logs.follow", !previous),
+	))
+	defer span.End()
+
 	// Upgrade to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade log stream connection: %v", err)
+		config.WithSpanError(ctx, "Failed to upgrade log stream connection", err,
+			config.K8SAttribute("namespace", namespace),
+			config.K8SAttribute("pod_name", podName))
+		span.RecordError(err)
 		return
 	}
 	defer conn.Close()
+
+	span.AddEvent("stream_started")
 
 	// Configure connection for proper timeout handling
 	conn.SetReadLimit(maxMessageSize)
@@ -80,17 +124,20 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 		return nil
 	})
 
-	log.Printf("Log stream connected for pod %s/%s, container %s", namespace, podName, container)
+	config.InfoCtx(ctx, "Log stream connected",
+		config.K8SAttribute("namespace", namespace),
+		config.K8SAttribute("pod_name", podName),
+		config.K8SAttribute("container_name", container))
 
 	// Create context for this stream
-	ctx, cancel := context.WithCancel(r.Context())
+	streamCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Start log stream in goroutine
 	logChan := make(chan string)
 	errChan := make(chan error)
 
-	go h.streamLogs(ctx, namespace, podName, container, previous, timestamps, logChan, errChan)
+	go h.streamLogs(streamCtx, namespace, podName, container, previous, timestamps, logChan, errChan)
 
 	// Send ping/pong keepalive
 	ticker := time.NewTicker(pingPeriod)
@@ -105,9 +152,13 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 			_, _, err := conn.ReadMessage()
 			if err != nil {
 				if !websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Printf("Log stream WebSocket read error: %v", err)
+					config.ErrorCtx(ctx, "Log stream WebSocket read error",
+						config.Err(err),
+						config.K8SAttribute("namespace", namespace),
+						config.K8SAttribute("pod_name", podName))
 				}
 				cancel()
+				span.AddEvent("stream_cancelled")
 				return
 			}
 		}
@@ -118,23 +169,44 @@ func (h *LogStreamHub) HandleLogStream(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-done:
 			return
-		case <-ctx.Done():
+		case <-streamCtx.Done():
+			span.AddEvent("stream_cancelled")
 			return
 		case line, ok := <-logChan:
 			if !ok {
 				// Stream ended normally
 				sendJSON(conn, logStreamMessage{Type: "end", Data: ""})
+				span.AddEvent("stream_eof")
 				return
 			}
 			if err := sendJSON(conn, logStreamMessage{Type: "log", Data: line}); err != nil {
-				log.Printf("Error sending log line: %v", err)
+				config.ErrorCtx(ctx, "Error sending log line",
+					config.Err(err),
+					config.K8SAttribute("namespace", namespace),
+					config.K8SAttribute("pod_name", podName))
+				h.streamErrors.Add(ctx, 1, metric.WithAttributes(
+					attribute.String("k8s.namespace", namespace),
+					attribute.String("k8s.pod_name", podName),
+					attribute.String("error.type", fmt.Sprintf("%T", err)),
+				))
 				return
 			}
+			h.linesStreamed.Add(ctx, 1, metric.WithAttributes(
+				attribute.String("k8s.namespace", namespace),
+				attribute.String("k8s.pod_name", podName),
+			))
 		case err, ok := <-errChan:
 			if !ok {
 				return
 			}
 			sendJSON(conn, logStreamMessage{Type: "error", Data: err.Error()})
+			h.streamErrors.Add(ctx, 1, metric.WithAttributes(
+				attribute.String("k8s.namespace", namespace),
+				attribute.String("k8s.pod_name", podName),
+				attribute.String("error.type", fmt.Sprintf("%T", err)),
+			))
+			span.RecordError(err)
+			span.AddEvent("stream_error")
 			return
 		case <-ticker.C:
 			conn.SetWriteDeadline(time.Now().Add(writeWait))
@@ -183,7 +255,10 @@ func (h *LogStreamHub) streamLogs(
 				}
 				// For streaming logs, errors during read are somewhat expected
 				// as the pod may be restarting or the connection may timeout
-				log.Printf("Log stream read error for %s/%s: %v", namespace, podName, err)
+				config.WarnCtx(ctx, "Log stream read error",
+					config.Err(err),
+					config.K8SAttribute("namespace", namespace),
+					config.K8SAttribute("pod_name", podName))
 				return
 			}
 

@@ -3,13 +3,13 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/krzyzao/kub/internal/config"
 	"github.com/krzyzao/kub/internal/k8s"
 )
 
@@ -28,8 +28,16 @@ func validateK8sName(name string) bool {
 }
 
 // respondError logs the detailed error and returns a generic message
-func respondError(w http.ResponseWriter, err error, statusCode int, userMessage string) {
-	log.Printf("API error: %v", err)
+func respondError(w http.ResponseWriter, r *http.Request, err error, statusCode int, userMessage string) {
+	ctx := r.Context()
+
+	// Log with trace context and structured fields
+	config.WithSpanError(ctx, "API error: "+userMessage, err,
+		config.HTTPAttribute("status_code", fmt.Sprintf("%d", statusCode)),
+		config.HTTPAttribute("method", r.Method),
+		config.HTTPAttribute("path", r.URL.Path),
+	)
+
 	http.Error(w, userMessage, statusCode)
 }
 
@@ -47,7 +55,7 @@ func NewHandler(k8sClient *k8s.Client) *Handler {
 func (h *Handler) GetNamespaces(w http.ResponseWriter, r *http.Request) {
 	namespaces, err := h.k8sClient.GetNamespaces(r.Context())
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch namespaces")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch namespaces")
 		return
 	}
 
@@ -64,7 +72,7 @@ func (h *Handler) GetPods(w http.ResponseWriter, r *http.Request) {
 
 	pods, err := h.k8sClient.GetPods(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch pods")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch pods")
 		return
 	}
 
@@ -94,7 +102,7 @@ func (h *Handler) GetPodsPaginated(w http.ResponseWriter, r *http.Request) {
 
 	result, err := h.k8sClient.GetPodsPaginated(r.Context(), namespace, limit, continueToken)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch pods")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch pods")
 		return
 	}
 
@@ -113,7 +121,7 @@ func (h *Handler) GetPod(w http.ResponseWriter, r *http.Request) {
 
 	pod, err := h.k8sClient.GetPod(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch pod")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch pod")
 		return
 	}
 
@@ -124,7 +132,7 @@ func (h *Handler) GetPod(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 	nodes, err := h.k8sClient.GetNodes(r.Context())
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch nodes")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch nodes")
 		return
 	}
 
@@ -176,7 +184,7 @@ func (h *Handler) GetNodes(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetNodeMetrics(w http.ResponseWriter, r *http.Request) {
 	metrics, err := h.k8sClient.GetNodeMetrics(r.Context())
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch node metrics")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch node metrics")
 		return
 	}
 
@@ -193,7 +201,7 @@ func (h *Handler) GetPodMetrics(w http.ResponseWriter, r *http.Request) {
 
 	metrics, err := h.k8sClient.GetPodMetrics(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch pod metrics")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch pod metrics")
 		return
 	}
 
@@ -210,7 +218,7 @@ func (h *Handler) GetClusterSummary(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.k8sClient.GetClusterSummary(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch cluster summary")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch cluster summary")
 		return
 	}
 
@@ -241,7 +249,7 @@ func (h *Handler) SwitchContext(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.k8sClient.SwitchContext(req.Context); err != nil {
-		respondError(w, err, http.StatusBadRequest, "failed to switch context")
+		respondError(w, r, err, http.StatusBadRequest, "failed to switch context")
 		return
 	}
 
@@ -258,7 +266,7 @@ func (h *Handler) GetDeployments(w http.ResponseWriter, r *http.Request) {
 
 	deployments, err := h.k8sClient.GetDeployments(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch deployments")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch deployments")
 		return
 	}
 
@@ -277,7 +285,7 @@ func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
 
 	deployment, err := h.k8sClient.GetDeployment(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch deployment")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch deployment")
 		return
 	}
 
@@ -294,7 +302,7 @@ func (h *Handler) GetServices(w http.ResponseWriter, r *http.Request) {
 
 	services, err := h.k8sClient.GetServices(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch services")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch services")
 		return
 	}
 
@@ -313,7 +321,7 @@ func (h *Handler) GetService(w http.ResponseWriter, r *http.Request) {
 
 	service, err := h.k8sClient.GetService(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch service")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch service")
 		return
 	}
 
@@ -330,7 +338,7 @@ func (h *Handler) GetConfigMaps(w http.ResponseWriter, r *http.Request) {
 
 	configmaps, err := h.k8sClient.GetConfigMaps(r.Context(), namespace)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch configmaps")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch configmaps")
 		return
 	}
 
@@ -349,7 +357,7 @@ func (h *Handler) GetConfigMap(w http.ResponseWriter, r *http.Request) {
 
 	configmap, err := h.k8sClient.GetConfigMap(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch configmap")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch configmap")
 		return
 	}
 
@@ -379,7 +387,7 @@ func (h *Handler) GetResourceEvents(w http.ResponseWriter, r *http.Request) {
 
 	events, err := h.k8sClient.GetResourceEvents(r.Context(), namespace, kind, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch events")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch events")
 		return
 	}
 
@@ -398,7 +406,7 @@ func (h *Handler) GetServiceEndpoints(w http.ResponseWriter, r *http.Request) {
 
 	endpoints, err := h.k8sClient.GetServiceEndpoints(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch endpoints")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch endpoints")
 		return
 	}
 
@@ -451,7 +459,7 @@ func (h *Handler) GetPodLogs(w http.ResponseWriter, r *http.Request) {
 
 	logs, err := h.k8sClient.GetPodLogs(r.Context(), namespace, name, logOpts)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch logs")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch logs")
 		return
 	}
 
@@ -477,7 +485,7 @@ func (h *Handler) GetContainers(w http.ResponseWriter, r *http.Request) {
 
 	containers, err := h.k8sClient.GetContainerNames(r.Context(), namespace, name)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch containers")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch containers")
 		return
 	}
 
@@ -525,7 +533,7 @@ func (h *Handler) DownloadPodLogs(w http.ResponseWriter, r *http.Request) {
 
 	logs, err := h.k8sClient.GetPodLogs(r.Context(), namespace, name, logOpts)
 	if err != nil {
-		respondError(w, err, http.StatusInternalServerError, "failed to fetch logs")
+		respondError(w, r, err, http.StatusInternalServerError, "failed to fetch logs")
 		return
 	}
 

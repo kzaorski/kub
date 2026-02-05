@@ -1,10 +1,16 @@
 package k8s
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -18,6 +24,8 @@ type Client struct {
 	MetricsClient *metricsv.Clientset
 	Config        *rest.Config
 	RawConfig     api.Config
+	tracer        trace.Tracer
+	meter         metric.Meter
 }
 
 // NewClient creates a new Kubernetes client
@@ -44,11 +52,17 @@ func NewClient() (*Client, error) {
 		return nil, fmt.Errorf("failed to load raw config: %w", err)
 	}
 
+	// Initialize OpenTelemetry tracer and meter
+	tracer := otel.Tracer("kub/k8s")
+	meter := otel.Meter("kub/k8s")
+
 	return &Client{
 		Clientset:     clientset,
 		MetricsClient: metricsClient,
 		Config:        config,
 		RawConfig:     *rawConfig,
+		tracer:        tracer,
+		meter:         meter,
 	}, nil
 }
 
@@ -86,6 +100,9 @@ func (c *Client) SwitchContext(contextName string) error {
 	c.MetricsClient = metricsClient
 	c.Config = config
 	c.RawConfig = *rawConfig
+	// Reinitialize tracer and meter after context switch
+	c.tracer = otel.Tracer("kub/k8s")
+	c.meter = otel.Meter("kub/k8s")
 
 	return nil
 }
@@ -105,4 +122,59 @@ func getKubeConfigPath() string {
 	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".kube", "config")
+}
+
+// recordOperation records a successful K8s operation metric
+func (c *Client) recordOperation(operation, resource string, duration time.Duration, attributes ...attribute.KeyValue) {
+	// Create histogram for operation duration
+	durationHist, _ := c.meter.Float64Histogram(
+		"k8s.operation.duration",
+		metric.WithUnit("ms"),
+		metric.WithDescription("Duration of Kubernetes API operations"),
+	)
+	if durationHist != nil {
+		allAttrs := append([]attribute.KeyValue{
+			attribute.String("k8s.operation", operation),
+			attribute.String("k8s.resource", resource),
+		}, attributes...)
+		durationHist.Record(context.Background(), float64(duration.Milliseconds()), metric.WithAttributes(allAttrs...))
+	}
+
+	// Create counter for operation count
+	countCounter, _ := c.meter.Int64Counter(
+		"k8s.operation.count",
+		metric.WithDescription("Count of Kubernetes API operations"),
+	)
+	if countCounter != nil {
+		allAttrs := append([]attribute.KeyValue{
+			attribute.String("k8s.operation", operation),
+			attribute.String("k8s.resource", resource),
+			attribute.String("result", "success"),
+		}, attributes...)
+		countCounter.Add(context.Background(), 1, metric.WithAttributes(allAttrs...))
+	}
+}
+
+// recordError records a K8s operation error metric
+func (c *Client) recordError(operation, resource string, err error, attributes ...attribute.KeyValue) {
+	errorCounter, _ := c.meter.Int64Counter(
+		"k8s.errors",
+		metric.WithDescription("Count of Kubernetes API errors"),
+	)
+	if errorCounter != nil {
+		errorType := "unknown"
+		if err != nil {
+			errorType = err.Error()
+			// Truncate long error messages
+			if len(errorType) > 50 {
+				errorType = errorType[:50]
+			}
+		}
+		allAttrs := append([]attribute.KeyValue{
+			attribute.String("k8s.operation", operation),
+			attribute.String("k8s.resource", resource),
+			attribute.String("k8s.error_type", errorType),
+		}, attributes...)
+		errorCounter.Add(context.Background(), 1, metric.WithAttributes(allAttrs...))
+	}
 }

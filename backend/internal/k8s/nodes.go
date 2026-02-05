@@ -7,14 +7,28 @@ import (
 	"time"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetNodes returns all nodes in the cluster
 func (c *Client) GetNodes(ctx context.Context) ([]models.Node, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.nodes.list",
+		trace.WithAttributes(
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	nodeList, err := c.Clientset.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("nodes.list", "nodes", err)
 		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
@@ -22,6 +36,10 @@ func (c *Client) GetNodes(ctx context.Context) ([]models.Node, error) {
 	for _, n := range nodeList.Items {
 		nodes = append(nodes, convertNode(n))
 	}
+
+	span.SetAttributes(attribute.Int("k8s.resource_count", len(nodes)))
+	c.recordOperation("nodes.list", "nodes", duration,
+		attribute.Int("k8s.resource_count", len(nodes)))
 
 	return nodes, nil
 }

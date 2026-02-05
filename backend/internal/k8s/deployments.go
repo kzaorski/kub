@@ -6,12 +6,23 @@ import (
 	"time"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetDeployments returns all deployments in the given namespace
 func (c *Client) GetDeployments(ctx context.Context, namespace string) ([]models.Deployment, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.deployments.list",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	listOpts := metav1.ListOptions{}
 
 	var deploymentList *appsv1.DeploymentList
@@ -23,7 +34,12 @@ func (c *Client) GetDeployments(ctx context.Context, namespace string) ([]models
 		deploymentList, err = c.Clientset.AppsV1().Deployments(namespace).List(ctx, listOpts)
 	}
 
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("deployments.list", "deployments", err,
+			attribute.String("k8s.namespace", namespace))
 		return nil, fmt.Errorf("failed to list deployments: %w", err)
 	}
 
@@ -32,17 +48,41 @@ func (c *Client) GetDeployments(ctx context.Context, namespace string) ([]models
 		deployments = append(deployments, convertDeployment(d))
 	}
 
+	span.SetAttributes(attribute.Int("k8s.resource_count", len(deployments)))
+	c.recordOperation("deployments.list", "deployments", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.Int("k8s.resource_count", len(deployments)))
+
 	return deployments, nil
 }
 
 // GetDeployment returns a specific deployment
 func (c *Client) GetDeployment(ctx context.Context, namespace, name string) (*models.Deployment, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.deployments.get",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.deployment_name", name),
+			attribute.String("k8s.operation", "get"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	deployment, err := c.Clientset.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("deployments.get", "deployments", err,
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.deployment_name", name))
 		return nil, fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	d := convertDeployment(*deployment)
+	c.recordOperation("deployments.get", "deployments", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.String("k8s.deployment_name", name))
 	return &d, nil
 }
 

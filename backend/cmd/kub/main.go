@@ -15,13 +15,32 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/krzyzao/kub/internal/api"
+	"github.com/krzyzao/kub/internal/config"
 	"github.com/krzyzao/kub/internal/k8s"
+	gootelhttp "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
 )
 
 //go:embed static/*
 var staticFiles embed.FS
 
 func main() {
+	// Load OpenTelemetry configuration
+	otelConfig := config.LoadOpenTelemetryConfig()
+
+	// Setup OpenTelemetry (optional, fails gracefully)
+	var otelCleanup func()
+	if !otelConfig.Disabled {
+		cleanup, err := config.SetupOpenTelemetry(otelConfig)
+		if err != nil {
+			log.Printf("Failed to setup OpenTelemetry: %v, continuing without instrumentation", err)
+		} else {
+			otelCleanup = cleanup
+			log.Printf("OpenTelemetry enabled: endpoint=%s, sampleRatio=%.2f, service=%s, environment=%s",
+				otelConfig.Endpoint, otelConfig.SampleRatio, otelConfig.ServiceName, otelConfig.Environment)
+		}
+	}
+
 	// Create K8s client
 	k8sClient, err := k8s.NewClient()
 	if err != nil {
@@ -49,6 +68,12 @@ func main() {
 			next.ServeHTTP(w, r)
 		})
 	})
+
+	// OpenTelemetry HTTP instrumentation (only if OTel is enabled)
+	if !otelConfig.Disabled && otel.GetTracerProvider() != nil {
+		r.Use(gootelhttpMiddleware("kub-api"))
+		log.Println("OpenTelemetry HTTP instrumentation enabled")
+	}
 
 	// Middleware
 	r.Use(middleware.Logger)
@@ -131,6 +156,12 @@ func main() {
 		<-sigChan
 
 		log.Println("Shutting down server...")
+
+		// Cleanup OpenTelemetry (flush traces and metrics)
+		if otelCleanup != nil {
+			otelCleanup()
+		}
+
 		cancel()
 
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -144,5 +175,20 @@ func main() {
 	log.Printf("Starting KUB server on http://localhost:%s", port)
 	if err := server.ListenAndServe(); err != http.ErrServerClosed {
 		log.Fatalf("Server error: %v", err)
+	}
+}
+
+// gootelhttpMiddleware creates a chi middleware for OpenTelemetry HTTP instrumentation
+func gootelhttpMiddleware(service string) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		// Wrap the handler with otelhttp
+		otelHandler := gootelhttp.NewHandler(next, service,
+			gootelhttp.WithSpanNameFormatter(func(operation string, r *http.Request) string {
+				// Create span name from method and path template
+				// Chi routes the request, so we use the actual path
+				return r.Method + " " + r.URL.Path
+			}),
+		)
+		return otelHandler
 	}
 }

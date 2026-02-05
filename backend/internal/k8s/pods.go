@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -13,6 +15,15 @@ import (
 
 // GetPods returns all pods in the given namespace
 func (c *Client) GetPods(ctx context.Context, namespace string) ([]models.Pod, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.pods.list",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	listOpts := metav1.ListOptions{}
 
 	var podList *corev1.PodList
@@ -24,7 +35,12 @@ func (c *Client) GetPods(ctx context.Context, namespace string) ([]models.Pod, e
 		podList, err = c.Clientset.CoreV1().Pods(namespace).List(ctx, listOpts)
 	}
 
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("pods.list", "pods", err,
+			attribute.String("k8s.namespace", namespace))
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
@@ -33,11 +49,26 @@ func (c *Client) GetPods(ctx context.Context, namespace string) ([]models.Pod, e
 		pods = append(pods, convertPod(p))
 	}
 
+	span.SetAttributes(attribute.Int("k8s.resource_count", len(pods)))
+	c.recordOperation("pods.list", "pods", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.Int("k8s.resource_count", len(pods)))
+
 	return pods, nil
 }
 
 // GetPodsPaginated returns pods with pagination support
 func (c *Client) GetPodsPaginated(ctx context.Context, namespace string, limit int64, continueToken string) (*models.PaginatedPods, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.pods.list.paginated",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "list_paginated"),
+			attribute.Int64("k8s.limit", limit),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	// Clamp limit to valid range
 	if limit < 1 {
 		limit = 100
@@ -60,7 +91,13 @@ func (c *Client) GetPodsPaginated(ctx context.Context, namespace string, limit i
 		podList, err = c.Clientset.CoreV1().Pods(namespace).List(ctx, listOpts)
 	}
 
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("pods.list.paginated", "pods", err,
+			attribute.String("k8s.namespace", namespace),
+			attribute.Int64("k8s.limit", limit))
 		return nil, fmt.Errorf("failed to list pods: %w", err)
 	}
 
@@ -76,30 +113,90 @@ func (c *Client) GetPodsPaginated(ctx context.Context, namespace string, limit i
 		HasMore:       podList.Continue != "",
 	}
 
+	span.SetAttributes(
+		attribute.Int("k8s.resource_count", len(pods)),
+		attribute.Bool("k8s.has_more", result.HasMore),
+	)
+	c.recordOperation("pods.list.paginated", "pods", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.Int64("k8s.limit", limit),
+		attribute.Int("k8s.resource_count", len(pods)))
+
 	return result, nil
 }
 
 // GetPod returns a specific pod
 func (c *Client) GetPod(ctx context.Context, namespace, name string) (*models.Pod, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.pods.get",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.pod_name", name),
+			attribute.String("k8s.operation", "get"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	pod, err := c.Clientset.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("pods.get", "pods", err,
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.pod_name", name))
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
 	p := convertPod(*pod)
+	c.recordOperation("pods.get", "pods", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.String("k8s.pod_name", name))
 	return &p, nil
 }
 
 // WatchPods returns a watch interface for pods in the given namespace
 func (c *Client) WatchPods(ctx context.Context, namespace string) (watch.Interface, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.pods.watch",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "watch"),
+		),
+	)
+	// Note: Don't defer span.End() here as watch is long-lived
+	// The span will end when the context is cancelled
+
+	start := time.Now()
 	listOpts := metav1.ListOptions{
 		Watch: true,
 	}
 
+	var w watch.Interface
+	var err error
+
 	if namespace == "" || namespace == "all" {
-		return c.Clientset.CoreV1().Pods("").Watch(ctx, listOpts)
+		w, err = c.Clientset.CoreV1().Pods("").Watch(ctx, listOpts)
+	} else {
+		w, err = c.Clientset.CoreV1().Pods(namespace).Watch(ctx, listOpts)
 	}
-	return c.Clientset.CoreV1().Pods(namespace).Watch(ctx, listOpts)
+
+	duration := time.Since(start)
+
+	if err != nil {
+		span.RecordError(err)
+		span.End()
+		c.recordError("pods.watch", "pods", err,
+			attribute.String("k8s.namespace", namespace))
+		return nil, err
+	}
+
+	c.recordOperation("pods.watch", "pods", duration,
+		attribute.String("k8s.namespace", namespace))
+
+	// End the span after watch is established
+	span.End()
+
+	return w, nil
 }
 
 func convertPod(p corev1.Pod) models.Pod {

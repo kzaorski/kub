@@ -6,12 +6,23 @@ import (
 	"time"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetServices returns all services in the given namespace
 func (c *Client) GetServices(ctx context.Context, namespace string) ([]models.Service, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.services.list",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	listOpts := metav1.ListOptions{}
 
 	var serviceList *corev1.ServiceList
@@ -23,7 +34,12 @@ func (c *Client) GetServices(ctx context.Context, namespace string) ([]models.Se
 		serviceList, err = c.Clientset.CoreV1().Services(namespace).List(ctx, listOpts)
 	}
 
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("services.list", "services", err,
+			attribute.String("k8s.namespace", namespace))
 		return nil, fmt.Errorf("failed to list services: %w", err)
 	}
 
@@ -32,17 +48,41 @@ func (c *Client) GetServices(ctx context.Context, namespace string) ([]models.Se
 		services = append(services, convertService(s))
 	}
 
+	span.SetAttributes(attribute.Int("k8s.resource_count", len(services)))
+	c.recordOperation("services.list", "services", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.Int("k8s.resource_count", len(services)))
+
 	return services, nil
 }
 
 // GetService returns a specific service
 func (c *Client) GetService(ctx context.Context, namespace, name string) (*models.Service, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.services.get",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.service_name", name),
+			attribute.String("k8s.operation", "get"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	service, err := c.Clientset.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("services.get", "services", err,
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.service_name", name))
 		return nil, fmt.Errorf("failed to get service: %w", err)
 	}
 
 	s := convertService(*service)
+	c.recordOperation("services.get", "services", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.String("k8s.service_name", name))
 	return &s, nil
 }
 

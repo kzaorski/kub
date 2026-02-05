@@ -5,16 +5,35 @@ import (
 	"fmt"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetServiceEndpoints returns endpoints for a specific service
 func (c *Client) GetServiceEndpoints(ctx context.Context, namespace, serviceName string) (*models.Endpoint, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.endpoints.get",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.service_name", serviceName),
+			attribute.String("k8s.operation", "get"),
+		),
+	)
+	defer span.End()
+
 	// Endpoints have the same name as the service
 	endpoints, err := c.Clientset.CoreV1().Endpoints(namespace).Get(ctx, serviceName, metav1.GetOptions{})
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("endpoints.get", "endpoints", err,
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.service_name", serviceName))
 		return nil, fmt.Errorf("failed to get endpoints: %w", err)
 	}
+
+	c.recordOperation("endpoints.get", "endpoints", 0,
+		attribute.String("k8s.namespace", namespace),
+		attribute.String("k8s.service_name", serviceName))
 
 	result := &models.Endpoint{
 		Addresses: []models.EndpointAddress{},
@@ -62,6 +81,11 @@ func (c *Client) GetServiceEndpoints(ctx context.Context, namespace, serviceName
 			})
 		}
 	}
+
+	span.SetAttributes(
+		attribute.Int("k8s.address_count", len(result.Addresses)),
+		attribute.Int("k8s.not_ready_count", len(result.NotReady)),
+	)
 
 	return result, nil
 }

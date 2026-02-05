@@ -3,15 +3,30 @@ package k8s
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/krzyzao/kub/internal/models"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // GetNodeMetrics returns metrics for all nodes
 func (c *Client) GetNodeMetrics(ctx context.Context) ([]models.NodeMetrics, error) {
+	ctx, span := c.tracer.Start(ctx, "k8s.metrics.nodes.list",
+		trace.WithAttributes(
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	nodeMetrics, err := c.MetricsClient.MetricsV1beta1().NodeMetricses().List(ctx, metav1.ListOptions{})
+	duration := time.Since(start)
+
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("metrics.nodes.list", "metrics", err)
 		return nil, fmt.Errorf("failed to get node metrics: %w", err)
 	}
 
@@ -50,17 +65,31 @@ func (c *Client) GetNodeMetrics(ctx context.Context) ([]models.NodeMetrics, erro
 		})
 	}
 
+	c.recordOperation("metrics.nodes.list", "metrics", duration,
+		attribute.Int("k8s.resource_count", len(metrics)))
+
 	return metrics, nil
 }
 
 // GetPodMetrics returns metrics for all pods in the given namespace
 func (c *Client) GetPodMetrics(ctx context.Context, namespace string) ([]models.PodMetrics, error) {
-	var podMetricsList interface{ Items() []interface{} }
+	ctx, span := c.tracer.Start(ctx, "k8s.metrics.pods.list",
+		trace.WithAttributes(
+			attribute.String("k8s.namespace", namespace),
+			attribute.String("k8s.operation", "list"),
+		),
+	)
+	defer span.End()
+
+	start := time.Now()
 	var err error
 
 	if namespace == "" || namespace == "all" {
 		pm, e := c.MetricsClient.MetricsV1beta1().PodMetricses("").List(ctx, metav1.ListOptions{})
 		if e != nil {
+			span.RecordError(e)
+			c.recordError("metrics.pods.list", "metrics", e,
+				attribute.String("k8s.namespace", namespace))
 			return nil, fmt.Errorf("failed to get pod metrics: %w", e)
 		}
 
@@ -79,15 +108,21 @@ func (c *Client) GetPodMetrics(ctx context.Context, namespace string) ([]models.
 				MemoryUsage: memTotal,
 			})
 		}
+
+		duration := time.Since(start)
+		c.recordOperation("metrics.pods.list", "metrics", duration,
+			attribute.String("k8s.namespace", namespace),
+			attribute.Int("k8s.resource_count", len(metrics)))
 		return metrics, nil
 	}
 
 	pm, err := c.MetricsClient.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
+		span.RecordError(err)
+		c.recordError("metrics.pods.list", "metrics", err,
+			attribute.String("k8s.namespace", namespace))
 		return nil, fmt.Errorf("failed to get pod metrics: %w", err)
 	}
-
-	_ = podMetricsList // silence unused warning
 
 	metrics := make([]models.PodMetrics, 0, len(pm.Items))
 	for _, p := range pm.Items {
@@ -104,6 +139,11 @@ func (c *Client) GetPodMetrics(ctx context.Context, namespace string) ([]models.
 			MemoryUsage: memTotal,
 		})
 	}
+
+	duration := time.Since(start)
+	c.recordOperation("metrics.pods.list", "metrics", duration,
+		attribute.String("k8s.namespace", namespace),
+		attribute.Int("k8s.resource_count", len(metrics)))
 
 	return metrics, nil
 }
